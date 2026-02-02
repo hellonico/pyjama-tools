@@ -53,6 +53,7 @@
                  "Content-Type" "application/json"}
         req-opts (cond-> {:headers headers
                           :throw-exceptions false
+                          :insecure? true  ; Skip SSL verification
                           :as :json}
                    (:query-params opts) (assoc :query-params (:query-params opts))
                    (:body opts) (assoc :body (json/generate-string (:body opts))))]
