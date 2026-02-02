@@ -98,7 +98,7 @@
 (defn upload-attachments-tool
   "Pyjama tool: Upload email attachments to Plane issue
   
-  Input: {:issue-id <id> :project-id <id> :attachments [{:filename <name> :path <path>}]}
+  Input: {:issue-id <id> :project-id <id> :attachments [{:filename <name> :path <path>}] :prefix-timestamp <bool>}
   Output: {:uploaded <count> :failed <count>}"
   [obs]
   (try
@@ -110,12 +110,18 @@
                              :id))
           issue-id (:issue-id obs)
           attachments (:attachments obs)
+          prefix-timestamp? (get obs :prefix-timestamp false)  ; Default to false
 
           results (for [att-file attachments]
                     (if-let [file-path (:path att-file)]
-                      (if (att/upload-attachment settings project-id issue-id file-path)
-                        :success
-                        :failed)
+                      (let [filename (if prefix-timestamp?
+                                       ;; Use timestamp-prefixed filename from temp file
+                                       (.getName (java.io.File. file-path))
+                                       ;; Use original filename
+                                       (:filename att-file))]
+                        (if (att/upload-attachment settings project-id issue-id file-path filename)
+                          :success
+                          :failed))
                       :failed))]
 
       {:uploaded (count (filter #(= % :success) results))
