@@ -208,7 +208,7 @@
                         filename (extract-filename-from-content-type content-type)
                         content (:body part)
                         temp-dir (System/getProperty "java.io.tmpdir")
-                        ;; Create unique filename to avoid collisions
+                        ;; Create unique filename to avoid collisions in temp dir
                         unique-name (str (System/currentTimeMillis) "-" filename)
                         temp-file (java.io.File. temp-dir unique-name)]
                     ;; Write content to temp file
@@ -218,7 +218,7 @@
                         ;; If content is InputStream, copy it
                         (when (instance? java.io.InputStream content)
                           (clojure.java.io/copy content out))))
-                    {:filename filename
+                    {:filename filename  ; Use original filename, not unique-name
                      :content-type (first (clojure.string/split content-type #";"))  ; Clean content-type
                      :path (.getAbsolutePath temp-file)
                      :size (.length temp-file)})))
