@@ -77,6 +77,7 @@
         result)
       (catch Exception e
         (println "✗ Error sending email:" (.getMessage e))
+        (.printStackTrace e)  ; Print full stack trace for debugging
         {:error :EXCEPTION
          :code -1
          :message (.getMessage e)
