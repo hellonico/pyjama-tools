@@ -77,28 +77,19 @@
                   unread-msg (first (filter #(not (.contains (.getFlags %) Flags$Flag/SEEN))
                                             messages))]
               (if unread-msg
-                (let [email (message/read-message unread-msg)]
+                (do
                   ;; Mark as read if requested
                   (when mark-read
                     (.setFlags unread-msg (doto (javax.mail.Flags.)
                                             (.add Flags$Flag/SEEN)) true)
                     (println "✓ Marked email as read"))
-                  ;; Extract attachments if present
-                  (let [attachments (when-let [body (:body email)]
-                                      (when (vector? body)
-                                        (->> body
-                                             (filter #(and (:content-type %)
-                                                           (not (clojure.string/starts-with?
-                                                                 (:content-type %) "text/"))))
-                                             (map (fn [part]
-                                                    {:filename (:filename part)
-                                                     :content-type (:content-type part)
-                                                     :size (when-let [content (:body part)]
-                                                             (if (string? content)
-                                                               (count content)
-                                                               0))}))
-                                             (filter :filename)
-                                             vec)))]
+                  ;; Extract and save attachments to temp files
+                  (let [email (message/read-message unread-msg)
+                        attachments (read/save-attachments email)]
+                    (when (seq attachments)
+                      (println (str "📎 Found " (count attachments) " attachment(s)"))
+                      (doseq [att attachments]
+                        (println (str "   - " (:filename att) " (" (:size att) " bytes)"))))
                     {:subject (:subject email)
                      :from (str (:from email))
                      :date (str (:date-sent email))

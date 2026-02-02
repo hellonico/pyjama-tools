@@ -1,6 +1,7 @@
 (ns email-client.read
   "Email reading functionality using clojure-mail library"
   (:require [clojure.string]
+            [clojure.java.io]
             [clojure-mail.core :as mail]
             [clojure-mail.message :as message]
             [secrets.core :as secrets]))
@@ -175,6 +176,42 @@
                                        (:content-type %) "text/html")
                                      body))]
         (get html-part :body)))))
+
+(defn save-attachments
+  "Extract and save attachments from email message to temporary files.
+  
+  Returns vector of maps with:
+  - :filename - Original filename
+  - :content-type - MIME type
+  - :path - Path to saved temporary file
+  - :size - File size in bytes"
+  [msg]
+  (let [body (:body msg)]
+    (when (vector? body)
+      (->> body
+           (filter #(and (:content-type %)
+                         (not (clojure.string/starts-with?
+                               (:content-type %) "text/"))
+                         (:filename %)))
+           (map (fn [part]
+                  (let [filename (:filename part)
+                        content (:body part)
+                        temp-dir (System/getProperty "java.io.tmpdir")
+                        ;; Create unique filename to avoid collisions
+                        unique-name (str (System/currentTimeMillis) "-" filename)
+                        temp-file (java.io.File. temp-dir unique-name)]
+                    ;; Write content to temp file
+                    (with-open [out (java.io.FileOutputStream. temp-file)]
+                      (if (bytes? content)
+                        (.write out content)
+                        ;; If content is InputStream, copy it
+                        (when (instance? java.io.InputStream content)
+                          (clojure.java.io/copy content out))))
+                    {:filename filename
+                     :content-type (:content-type part)
+                     :path (.getAbsolutePath temp-file)
+                     :size (.length temp-file)})))
+           vec))))
 
 ;; ============================================================================
 ;; CLI Interface
