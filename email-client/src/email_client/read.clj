@@ -156,8 +156,8 @@
       (string? body)
       body
 
-      ;; Multipart body - extract text/plain
-      (vector? body)
+      ;; Multipart body - extract text/plain (handles both vector and LazySeq)
+      (sequential? body)
       (let [text-part (first (filter #(= "text/plain" (:content-type %)) body))]
         (get text-part :body ""))
 
@@ -187,7 +187,7 @@
   - :size - File size in bytes"
   [msg]
   (let [body (:body msg)]
-    (when (vector? body)
+    (when (sequential? body)  ; Changed from vector? to sequential? to handle LazySeq
       (->> body
            (filter #(and (:content-type %)
                          (not (clojure.string/starts-with?

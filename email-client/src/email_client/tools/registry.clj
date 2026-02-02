@@ -87,12 +87,13 @@
                   (let [email (message/read-message unread-msg)]
                     (println "📧 Email structure:")
                     (println "   Body type:" (type (:body email)))
-                    (println "   Body vector?" (vector? (:body email)))
-                    (when (vector? (:body email))
-                      (println "   Body parts:" (count (:body email)))
-                      (doseq [[idx part] (map-indexed vector (:body email))]
-                        (println (str "   Part " idx ": " (:content-type part)
-                                      (when (:filename part) (str " [" (:filename part) "]"))))))
+                    (println "   Body sequential?" (sequential? (:body email)))
+                    (when (sequential? (:body email))
+                      (let [body-vec (vec (:body email))]
+                        (println "   Body parts:" (count body-vec))
+                        (doseq [[idx part] (map-indexed vector body-vec)]
+                          (println (str "   Part " idx ": " (:content-type part)
+                                        (when (:filename part) (str " [" (:filename part) "]")))))))
                     (let [attachments (read/save-attachments email)]
                       (when (seq attachments)
                         (println (str "📎 Found " (count attachments) " attachment(s)"))
