@@ -118,7 +118,7 @@
   - settings: Email settings map
   - to: Recipient email address
   - subject: Email subject
-  - body: Email body text
+  - body: Email body text (will be wrapped as text/plain)
   - attachments: Vector of attachment maps with:
     - :type - MIME type (e.g., \"application/pdf\")
     - :content - File path or java.io.File
@@ -127,7 +127,9 @@
   (send-email settings
               {:to to
                :subject subject
-               :body body
+               ;; When attachments are present, body must be multipart
+               :body [{:type "text/plain"
+                       :content body}]
                :attachments attachments}))
 
 ;; ============================================================================
