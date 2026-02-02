@@ -1,0 +1,5 @@
+sequence_id,name,priority,state,description_html,created_at,updated_at,assignees,labels,id
+13,[DEPLOY] CI/CD pipeline failing on production deploy,high,c30c00d0-0b8b-468b-b532-047d6607c387,<p></p>,2026-02-02T04:52:02.764249Z,2026-02-02T04:52:02.817649Z,,,c58c12fa-9896-46ba-a8b8-fd14044c6675
+11,[BUG] URGENT: Login form completely broken on mobile,urgent,c30c00d0-0b8b-468b-b532-047d6607c387,<p></p>,2026-02-02T04:51:58.680097Z,2026-02-02T04:54:30.893311Z,,,17f842ec-682e-483e-9b0b-ced8c9cc56cb
+10,[DEPLOY] CI/CD pipeline failing on production deploy,high,c30c00d0-0b8b-468b-b532-047d6607c387,<p></p>,2026-02-02T04:50:55.787067Z,2026-02-02T04:50:55.846375Z,,,c37c578f-7579-4d7a-b737-111279205082
+8,[BUG] URGENT: Login form completely broken on mobile,urgent,c30c00d0-0b8b-468b-b532-047d6607c387,<p></p>,2026-02-02T04:50:51.500661Z,2026-02-02T04:50:53.380511Z,,,78b9137d-524d-4013-89cf-04c39b2a01f9

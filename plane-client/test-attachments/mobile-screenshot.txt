@@ -1,0 +1,10 @@
+Mobile Screenshot - Login Button Issue
+
+[Simulated screenshot showing non-responsive login button]
+
+Device: iPhone 14 Pro
+iOS Version: 17.2
+Browser: Safari
+Timestamp: 2026-02-02 10:30:00
+
+Issue: Submit button shows no visual feedback when tapped.

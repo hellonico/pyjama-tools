@@ -1,0 +1,24 @@
+# Clojure
+.cpcache/
+.nrepl-port
+.rebel_readline_history
+target/
+pom.xml
+pom.xml.asc
+*.jar
+*.class
+
+# Secrets
+secrets.edn
+secrets.edn.enc
+
+# IDE
+.lsp/
+.clj-kondo/
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,23 @@
+{:paths ["src"]
+
+ :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+        com.draines/postal {:mvn/version "2.0.5"}
+        io.forward/clojure-mail {:mvn/version "1.0.8"} hellonico/secrets       {:git/url "https://github.com/hellonico/secrets.git"
+                                                                                :git/sha "a9bbf5ab13fc5df2ae6e20a586b14a5476eb945c"}}
+
+
+ :aliases
+ {:send
+  {:main-opts ["-m" "email-client.send"]}
+
+  :read
+  {:main-opts ["-m" "email-client.read"]}
+
+  :watch
+  {:main-opts ["-m" "email-client.watch"]}
+
+  :watch-poll
+  {:main-opts ["-m" "email-client.watch-poll"]}
+
+  :demo
+  {:main-opts ["-m" "email-client.demo"]}}}

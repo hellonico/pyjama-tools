@@ -1,0 +1,71 @@
+;; Email Settings Configuration
+;; Fill in your email settings below and rename this file to email-settings.edn
+
+{;; SMTP Connection Settings
+ :smtp {:host "smtp.gmail.com"           ; SMTP server hostname
+        :port 587                        ; Port (587 for TLS, 465 for SSL, 25 for plain)
+        :user "your-email@gmail.com"     ; Your email address / username
+        :pass "your-app-password"        ; Your password or app-specific password
+        :tls true                        ; Use TLS (true/false)
+        :ssl false}                      ; Use SSL (true/false)
+ 
+ ;; IMAP Settings (for reading emails)
+ :imap {:host "imap.gmail.com"           ; IMAP server hostname
+        :port 993                        ; Port (993 for SSL, 143 for plain)
+        :user "your-email@gmail.com"     ; Your email address / username
+        :pass "your-app-password"        ; Your password or app-specific password
+        :ssl true}                       ; Use SSL (true/false)
+ 
+ ;; Default Email Settings
+ :defaults {:from "your-email@gmail.com" ; Default sender address
+            :reply-to "your-email@gmail.com"}} ; Default reply-to address
+
+;; ============================================================================
+;; Configuration Guide
+;; ============================================================================
+
+;; GMAIL USERS:
+;; ------------
+;; 1. Enable 2-factor authentication on your Google account
+;; 2. Generate an app-specific password:
+;;    - Go to: https://myaccount.google.com/apppasswords
+;;    - Select "Mail" and your device
+;;    - Use the generated 16-character password as :pass
+;; 3. Use these settings:
+;;    SMTP: smtp.gmail.com, port 587, TLS true
+;;    IMAP: imap.gmail.com, port 993, SSL true
+
+;; OUTLOOK/OFFICE 365:
+;; -------------------
+;; SMTP: smtp-mail.outlook.com, port 587, TLS true
+;; IMAP: outlook.office365.com, port 993, SSL true
+
+;; YAHOO MAIL:
+;; -----------
+;; SMTP: smtp.mail.yahoo.com, port 465 or 587, SSL/TLS true
+;; IMAP: imap.mail.yahoo.com, port 993, SSL true
+
+;; AMAZON SES:
+;; -----------
+;; SMTP: email-smtp.us-east-1.amazonaws.com (or your region)
+;; Port: 587 or 465
+;; User: Your SMTP IAM credentials (starts with AKIA...)
+;; Pass: Your SMTP password
+
+;; CUSTOM SMTP SERVER:
+;; -------------------
+;; Check with your email provider for specific settings
+;; Common ports:
+;;   - 25:  Plain SMTP (often blocked by ISPs)
+;;   - 465: SMTP with SSL (legacy)
+;;   - 587: SMTP with TLS (recommended)
+;;   - 993: IMAP with SSL
+;;   - 143: IMAP plain (not recommended)
+
+;; SECURITY NOTES:
+;; ---------------
+;; 1. Never commit this file with real credentials to git!
+;; 2. Add email-settings.edn to .gitignore
+;; 3. Use app-specific passwords when possible
+;; 4. Consider using environment variables for production
+;; 5. Alternatively, store in ~/secrets.edn for better security

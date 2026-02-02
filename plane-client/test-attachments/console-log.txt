@@ -1,0 +1,8 @@
+Browser Console Log
+
+[ERROR] TypeError: Cannot read property 'submit' of null
+    at handleLoginClick (auth.js:245)
+    at HTMLButtonElement.<anonymous> (auth.js:12)
+
+Stack trace shows the form submit handler is trying to access a null element.
+Likely cause: Form element not properly mounted before event listeners attached.

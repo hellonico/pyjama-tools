@@ -1,0 +1,48 @@
+{:paths ["src" "test"]
+
+ :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+        clj-http/clj-http {:mvn/version "3.12.3"}
+        cheshire/cheshire {:mvn/version "5.12.0"}
+        hellonico/secrets {:git/url "https://github.com/hellonico/secrets.git"
+                           :git/sha "a9bbf5ab13fc5df2ae6e20a586b14a5476eb945c"}}
+
+ :aliases
+ {:repl
+  {:main-opts ["-m" "clojure.main"]}
+
+  :projects
+  {:main-opts ["-m" "plane-client.projects"]}
+
+  :work-items
+  {:main-opts ["-m" "plane-client.work-items"]}
+
+  ;; Test/Demo commands
+  :demo
+  {:main-opts ["-m" "plane-client.demo.basic"]}
+
+  :email-demo
+  {:main-opts ["-m" "plane-client.demo.email-integration"]}
+
+  :cleanup
+  {:main-opts ["-m" "plane-client.demo.cleanup"]}
+
+  :test-attachment
+  {:main-opts ["-m" "plane-client.demo.test-attachment"]}
+
+  :test-upload
+  {:main-opts ["-m" "plane-client.demo.test-upload"]}
+
+  :inspect-issue
+  {:main-opts ["-m" "plane-client.demo.inspect-issue"]}
+
+  :check-edemo-11
+  {:main-opts ["-m" "plane-client.demo.check-edemo-11"]}
+
+  :export
+  {:main-opts ["-m" "plane-client.export"]}
+
+  :export-demo
+  {:main-opts ["-m" "plane-client.demo.export-demo"]}
+
+  :filter-demo
+  {:main-opts ["-m" "plane-client.demo.filter-demo"]}}}
