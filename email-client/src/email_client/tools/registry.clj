@@ -84,18 +84,26 @@
                                             (.add Flags$Flag/SEEN)) true)
                     (println "✓ Marked email as read"))
                   ;; Extract and save attachments to temp files
-                  (let [email (message/read-message unread-msg)
-                        attachments (read/save-attachments email)]
-                    (when (seq attachments)
-                      (println (str "📎 Found " (count attachments) " attachment(s)"))
-                      (doseq [att attachments]
-                        (println (str "   - " (:filename att) " (" (:size att) " bytes)"))))
-                    {:subject (:subject email)
-                     :from (str (:from email))
-                     :date (str (:date-sent email))
-                     :body (read/get-message-body email)
-                     :attachments attachments
-                     :has-attachments (boolean (seq attachments))}))
+                  (let [email (message/read-message unread-msg)]
+                    (println "📧 Email structure:")
+                    (println "   Body type:" (type (:body email)))
+                    (println "   Body vector?" (vector? (:body email)))
+                    (when (vector? (:body email))
+                      (println "   Body parts:" (count (:body email)))
+                      (doseq [[idx part] (map-indexed vector (:body email))]
+                        (println (str "   Part " idx ": " (:content-type part)
+                                      (when (:filename part) (str " [" (:filename part) "]"))))))
+                    (let [attachments (read/save-attachments email)]
+                      (when (seq attachments)
+                        (println (str "📎 Found " (count attachments) " attachment(s)"))
+                        (doseq [att attachments]
+                          (println (str "   - " (:filename att) " (" (:size att) " bytes)"))))
+                      {:subject (:subject email)
+                       :from (str (:from email))
+                       :date (str (:date-sent email))
+                       :body (read/get-message-body email)
+                       :attachments attachments
+                       :has-attachments (boolean (seq attachments))})))
                 {:message "No new emails"}))
             (finally
               (.close folder false)
