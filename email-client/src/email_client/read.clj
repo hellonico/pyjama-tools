@@ -177,6 +177,13 @@
                                      body))]
         (get html-part :body)))))
 
+(defn extract-filename-from-content-type
+  "Extract filename from content-type header like 'application/pdf; name=file.pdf'"
+  [content-type]
+  (when content-type
+    (when-let [match (re-find #"name=([^\s;]+)" content-type)]
+      (second match))))
+
 (defn save-attachments
   "Extract and save attachments from email message to temporary files.
   
@@ -189,12 +196,16 @@
   (let [body (:body msg)]
     (when (sequential? body)  ; Changed from vector? to sequential? to handle LazySeq
       (->> body
-           (filter #(and (:content-type %)
-                         (not (clojure.string/starts-with?
-                               (:content-type %) "text/"))
-                         (:filename %)))
+           ;; Filter for non-text parts that have a filename in content-type
+           (filter (fn [part]
+                     (let [ct (:content-type part)]
+                       (and ct
+                            (not (clojure.string/starts-with?
+                                  (clojure.string/upper-case ct) "TEXT/"))
+                            (extract-filename-from-content-type ct)))))
            (map (fn [part]
-                  (let [filename (:filename part)
+                  (let [content-type (:content-type part)
+                        filename (extract-filename-from-content-type content-type)
                         content (:body part)
                         temp-dir (System/getProperty "java.io.tmpdir")
                         ;; Create unique filename to avoid collisions
@@ -208,7 +219,7 @@
                         (when (instance? java.io.InputStream content)
                           (clojure.java.io/copy content out))))
                     {:filename filename
-                     :content-type (:content-type part)
+                     :content-type (first (clojure.string/split content-type #";"))  ; Clean content-type
                      :path (.getAbsolutePath temp-file)
                      :size (.length temp-file)})))
            vec))))
