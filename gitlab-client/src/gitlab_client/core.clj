@@ -14,19 +14,15 @@
   
   Expected settings:
   - :gitlab-url - GitLab instance URL (default: https://gitlab.com)
-  - :gitlab-token - Personal access token
+  - :gitlab-token - Personal access token (required at runtime)
   
-  Returns settings map or nil if token is missing."
+  Returns settings map."
   []
-  (let [token (secrets/get-secret :gitlab-token)
-        url (or (secrets/get-secret :gitlab-url) "https://gitlab.com")]
-    (when-not token
-      (println "⚠️  GitLab token not found!")
-      (println "   Please add :gitlab-token to your secrets.edn")
-      (println "   OR set GITLAB_TOKEN environment variable."))
-    (when token
-      {:url url
-       :token token})))
+  (let [url (or (secrets/get-secret :gitlab-url) "https://gitlab.com")
+        ;; Use require-secret!! so it's only checked at runtime, not namespace load
+        token (secrets/require-secret!! :gitlab-token)]
+    {:url url
+     :token token}))
 
 ;; ============================================================================
 ;; HTTP Request Helpers
@@ -39,7 +35,7 @@
         path (if (str/starts-with? path "/") path (str "/" path))]
     (str base "/api/v4" path)))
 
-(defn- request
+(defn request
   "Make HTTP request to GitLab API.
   
   Parameters:

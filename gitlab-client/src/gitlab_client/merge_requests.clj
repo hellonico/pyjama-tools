@@ -25,7 +25,7 @@
                        (:per-page opts) (assoc :per_page (:per-page opts))
                        (:page opts) (assoc :page (:page opts)))
         response (core/request settings :get "/merge_requests" {:query-params query-params})]
-    
+
     (if (:success response)
       (:data response)
       (do
@@ -47,7 +47,7 @@
                        project-id)
         path (str "/projects/" project-path "/merge_requests/" mr-iid)
         response (core/request settings :get path {})]
-    
+
     (when (:success response)
       (:data response))))
 
@@ -66,7 +66,7 @@
                        project-id)
         path (str "/projects/" project-path "/merge_requests/" mr-iid "/changes")
         response (core/request settings :get path {})]
-    
+
     (when (:success response)
       (:data response))))
 
@@ -85,7 +85,7 @@
                        project-id)
         path (str "/projects/" project-path "/merge_requests/" mr-iid "/diffs")
         response (core/request settings :get path {})]
-    
+
     (if (:success response)
       (:data response)
       [])))
@@ -106,7 +106,7 @@
                        project-id)
         path (str "/projects/" project-path "/merge_requests/" mr-iid "/notes")
         response (core/request settings :post path {:body {:body body}})]
-    
+
     (if (:success response)
       (do
         (println "✓ Comment added to MR")
@@ -150,7 +150,7 @@
 (defn print-merge-requests
   "Pretty-print a list of merge requests"
   [mrs]
-  (println "\n=== Merge Requests ===\")
+  (println "\n=== Merge Requests ===\n")
   (println "Total:" (count mrs))
   (doseq [mr mrs]
     (print-merge-request mr)))
@@ -159,19 +159,19 @@
   ;; Example usage
   (require '[gitlab-client.core :as gitlab])
   (def settings (gitlab/load-settings))
-  
+
   ;; List assigned MRs
   (def mrs (list-assigned-merge-requests settings))
   (print-merge-requests mrs)
-  
+
   ;; Get specific MR
   (def mr (get-merge-request settings "group/project" 123))
   (print-merge-request mr)
-  
+
   ;; Get MR changes/diff
   (def changes (get-merge-request-changes settings "group/project" 123))
   (def diff-content (extract-diff-content changes))
   (println diff-content)
-  
+
   ;; Add comment
   (add-merge-request-note settings "group/project" 123 "LGTM! 🚀"))
