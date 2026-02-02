@@ -2,7 +2,9 @@
   "Register email tools with Pyjama framework"
   (:require [email-client.send :as send]
             [email-client.read :as read]
-            [secrets.core :as secrets]))
+            [clojure-mail.message :as message]
+            [secrets.core :as secrets])
+  (:import [javax.mail Folder Flags$Flag]))
 
 ;; ============================================================================
 ;; Tool Implementations
@@ -56,21 +58,38 @@
   "Watch for new emails (streaming)
   
   Args:
-    :interval-ms - polling interval in milliseconds (default 5000)"
-  [{:keys [_interval-ms]}]
+    :interval-ms - polling interval in milliseconds (default 5000)
+    :mark-read - mark message as read after retrieving (default true)"
+  [{:keys [_interval-ms mark-read]
+    :or {mark-read true}}]
   (let [settings (secrets/require-secret! :email)]
     (if-not settings
       {:error "Email settings not found in secrets"}
       (try
-        ;; Start watcher - returns immediately with first email found
-        (let [emails (read/read-unread settings {:limit 1})
-              email (first emails)]
-          (if email
-            {:subject (:subject email)
-             :from (str (:from email))
-             :date (str (:date-sent email))
-             :body (read/get-message-body email)}
-            {:message "No new emails"}))
+        ;; Get store and folder with READ_WRITE access
+        (let [store (read/get-store settings)
+              folder (.getFolder store "INBOX")]
+          (.open folder Folder/READ_WRITE)
+          (try
+            (let [messages (.getMessages folder)
+                  ;; Find first unread message
+                  unread-msg (first (filter #(not (.contains (.getFlags %) Flags$Flag/SEEN))
+                                            messages))]
+              (if unread-msg
+                (let [email (message/read-message unread-msg)]
+                  ;; Mark as read if requested
+                  (when mark-read
+                    (.setFlags unread-msg (doto (javax.mail.Flags.)
+                                            (.add Flags$Flag/SEEN)) true)
+                    (println "✓ Marked email as read"))
+                  {:subject (:subject email)
+                   :from (str (:from email))
+                   :date (str (:date-sent email))
+                   :body (read/get-message-body email)})
+                {:message "No new emails"}))
+            (finally
+              (.close folder false)
+              (.close store))))
         (catch Exception e
           {:error (str "Failed to watch: " (.getMessage e))})))))
 
@@ -114,7 +133,10 @@
     :parameters {:type "object"
                  :properties {:interval-ms {:type "integer"
                                             :description "Polling interval in milliseconds"
-                                            :default 5000}}
+                                            :default 5000}
+                              :mark-read {:type "boolean"
+                                          :description "Mark retrieved emails as read"
+                                          :default true}}
                  :required []}
     :streaming true
     :function watch-emails}})
