@@ -57,12 +57,13 @@
 
 (defn watch-emails
   "Watch for new emails (streaming)
-  
-  Args:
-    :interval-ms - polling interval in milliseconds (default 5000)
-    :mark-read - mark message as read after retrieving (default true)"
-  [{:keys [_interval-ms mark-read]
-    :or {mark-read true}}]
+   
+   Args:
+     :interval-ms - polling interval in milliseconds (default 5000)
+     :mark-read - mark message as read after retrieving (default true)
+     :limit - maximum number of emails to retrieve (default 10)"
+  [{:keys [_interval-ms mark-read limit]
+    :or {mark-read true limit 10}}]
   (let [settings (secrets/require-secret! :email)]
     (if-not settings
       {:error "Email settings not found in secrets"}
@@ -73,41 +74,37 @@
           (.open folder Folder/READ_WRITE)
           (try
             (let [messages (.getMessages folder)
-                  ;; Find first unread message
-                  unread-msg (first (filter #(not (.contains (.getFlags %) Flags$Flag/SEEN))
-                                            messages))]
-              (if unread-msg
-                (do
-                  ;; Mark as read if requested
+                  ;; Find ALL unread messages (up to limit)
+                  unread-msgs (->> messages
+                                   (filter #(not (.contains (.getFlags %) Flags$Flag/SEEN)))
+                                   (take limit)
+                                   vec)]
+              (if (seq unread-msgs)
+                (let [emails (mapv (fn [unread-msg]
+                                     ;; Mark as read if requested
+                                     (when mark-read
+                                       (.setFlags unread-msg (doto (javax.mail.Flags.)
+                                                               (.add Flags$Flag/SEEN)) true))
+                                     ;; Extract and save attachments to temp files
+                                     (let [email (message/read-message unread-msg)
+                                           attachments (read/save-attachments email)]
+                                       (when (seq attachments)
+                                         (println (str "📎 Found " (count attachments) " attachment(s) in: " (:subject email))))
+                                       {:subject (:subject email)
+                                        :from (str (:from email))
+                                        :date (str (:date-sent email))
+                                        :body (read/get-message-body email)
+                                        :attachments attachments
+                                        :has-attachments (boolean (seq attachments))}))
+                                   unread-msgs)]
+                  (println (str "✓ Retrieved " (count emails) " unread email(s)"))
                   (when mark-read
-                    (.setFlags unread-msg (doto (javax.mail.Flags.)
-                                            (.add Flags$Flag/SEEN)) true)
-                    (println "✓ Marked email as read"))
-                  ;; Extract and save attachments to temp files
-                  (let [email (message/read-message unread-msg)]
-                    (println "📧 Email structure:")
-                    (println "   Body type:" (type (:body email)))
-                    (println "   Body sequential?" (sequential? (:body email)))
-                    (when (sequential? (:body email))
-                      (let [body-vec (vec (:body email))]
-                        (println "   Body parts:" (count body-vec))
-                        (doseq [[idx part] (map-indexed vector body-vec)]
-                          (println (str "   Part " idx ": " (:content-type part)
-                                        (when (:filename part) (str " [filename=" (:filename part) "]"))))
-                          (println (str "      Keys: " (keys part))))))
-                    (let [attachments (read/save-attachments email)]
-                      (println "   Attachments extracted:" (count attachments))
-                      (when (seq attachments)
-                        (println (str "📎 Found " (count attachments) " attachment(s)"))
-                        (doseq [att attachments]
-                          (println (str "   - " (:filename att) " (" (:size att) " bytes)"))))
-                      {:subject (:subject email)
-                       :from (str (:from email))
-                       :date (str (:date-sent email))
-                       :body (read/get-message-body email)
-                       :attachments attachments
-                       :has-attachments (boolean (seq attachments))})))
-                {:message "No new emails"}))
+                    (println (str "✓ Marked " (count emails) " email(s) as read")))
+                  {:emails emails
+                   :count (count emails)})
+                {:emails []
+                 :count 0
+                 :message "No new emails"}))
             (finally
               (.close folder false)
               (.close store))))
@@ -150,14 +147,17 @@
 
    :watch-emails
    {:name "watch-emails"
-    :description "Start watching for new emails. This will stream new emails as they arrive. The watcher runs continuously until stopped."
+    :description "Watch for new emails. Returns all unread emails (up to limit). Use with loop construct to process multiple emails in batch."
     :parameters {:type "object"
                  :properties {:interval-ms {:type "integer"
                                             :description "Polling interval in milliseconds"
                                             :default 5000}
                               :mark-read {:type "boolean"
                                           :description "Mark retrieved emails as read"
-                                          :default true}}
+                                          :default true}
+                              :limit {:type "integer"
+                                      :description "Maximum number of emails to retrieve"
+                                      :default 10}}
                  :required []}
     :streaming true
     :function watch-emails}})
