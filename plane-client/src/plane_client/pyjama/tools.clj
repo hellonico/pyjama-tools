@@ -148,10 +148,11 @@
                          (-> (projects/list-projects settings)
                              first
                              :id))
-          work-items (items/list-work-items settings project-id)]
+          work-items (items/list-work-items settings project-id)
+          incomplete-items (filter #(not= (:state %) "8c715458-2c2a-4330-87d3-2b2c5e436e36") work-items)]
 
-      {:items work-items
-       :count (count work-items)
+      {:items incomplete-items
+       :count (count incomplete-items)
        :project-id project-id})
 
     (catch Exception e
