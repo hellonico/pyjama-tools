@@ -3,6 +3,7 @@
   (:require [email-client.send :as send]
             [email-client.read :as read]
             [clojure-mail.message :as message]
+            [clojure.string]
             [secrets.core :as secrets])
   (:import [javax.mail Folder Flags$Flag]))
 
@@ -82,10 +83,28 @@
                     (.setFlags unread-msg (doto (javax.mail.Flags.)
                                             (.add Flags$Flag/SEEN)) true)
                     (println "✓ Marked email as read"))
-                  {:subject (:subject email)
-                   :from (str (:from email))
-                   :date (str (:date-sent email))
-                   :body (read/get-message-body email)})
+                  ;; Extract attachments if present
+                  (let [attachments (when-let [body (:body email)]
+                                      (when (vector? body)
+                                        (->> body
+                                             (filter #(and (:content-type %)
+                                                           (not (clojure.string/starts-with?
+                                                                 (:content-type %) "text/"))))
+                                             (map (fn [part]
+                                                    {:filename (:filename part)
+                                                     :content-type (:content-type part)
+                                                     :size (when-let [content (:body part)]
+                                                             (if (string? content)
+                                                               (count content)
+                                                               0))}))
+                                             (filter :filename)
+                                             vec)))]
+                    {:subject (:subject email)
+                     :from (str (:from email))
+                     :date (str (:date-sent email))
+                     :body (read/get-message-body email)
+                     :attachments attachments
+                     :has-attachments (boolean (seq attachments))}))
                 {:message "No new emails"}))
             (finally
               (.close folder false)
