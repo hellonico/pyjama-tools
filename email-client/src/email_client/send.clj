@@ -121,7 +121,8 @@
   - subject: Email subject
   - body: Email body text
   - attachments: Vector of attachment maps with:
-    - :type - MIME type (e.g., \"application/pdf\")
+    - :type - Must be :attachment (or :inline)
+    - :content-type - MIME type (e.g., \"application/pdf\")
     - :content - File path or java.io.File
     - :file-name - Optional display name"
   [settings to subject body attachments]
@@ -208,7 +209,8 @@
                                "recipient@example.com"
                                "Document Attached"
                                "Please see attached document."
-                               [{:type "application/pdf"
+                               [{:type :attachment
+                                 :content-type "application/pdf"
                                  :content (clojure.java.io/file "document.pdf")
                                  :file-name "report.pdf"}])
 
