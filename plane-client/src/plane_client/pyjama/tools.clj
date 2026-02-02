@@ -69,7 +69,10 @@
            :action :updated
            :title (:name existing-issue)
            :comment-added true
-           :priority (:priority existing-issue)})
+           :priority (:priority existing-issue)
+           :project-id project-id
+           :attachments (:attachments obs)  ; Pass through for upload step
+           :has-attachments (:has-attachments obs)})
 
         ;; Create new issue
         (let [issue-title (email-subject-to-issue-title (:subject obs))
@@ -83,7 +86,9 @@
            :title (:name created-issue)
            :priority (:priority created-issue)
            :team (get-in analysis [:assignee :team])
-           :project-id project-id})))
+           :project-id project-id
+           :attachments (:attachments obs)  ; Pass through for upload step
+           :has-attachments (:has-attachments obs)})))
 
     (catch Exception e
       {:error (.getMessage e)
