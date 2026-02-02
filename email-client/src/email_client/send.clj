@@ -118,19 +118,19 @@
   - settings: Email settings map
   - to: Recipient email address
   - subject: Email subject
-  - body: Email body text (will be wrapped as text/plain)
+  - body: Email body text
   - attachments: Vector of attachment maps with:
     - :type - MIME type (e.g., \"application/pdf\")
     - :content - File path or java.io.File
     - :file-name - Optional display name"
   [settings to subject body attachments]
+  ;; Postal expects :body to be a vector containing both text and attachments
   (send-email settings
               {:to to
                :subject subject
-               ;; When attachments are present, body must be multipart
-               :body [{:type "text/plain"
-                       :content body}]
-               :attachments attachments}))
+               :body (into [{:type "text/plain; charset=utf-8"
+                             :content body}]
+                           attachments)}))
 
 ;; ============================================================================
 ;; CLI Interface
