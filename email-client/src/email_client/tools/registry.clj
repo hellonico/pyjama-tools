@@ -93,8 +93,10 @@
                         (println "   Body parts:" (count body-vec))
                         (doseq [[idx part] (map-indexed vector body-vec)]
                           (println (str "   Part " idx ": " (:content-type part)
-                                        (when (:filename part) (str " [" (:filename part) "]")))))))
+                                        (when (:filename part) (str " [filename=" (:filename part) "]"))))
+                          (println (str "      Keys: " (keys part))))))
                     (let [attachments (read/save-attachments email)]
+                      (println "   Attachments extracted:" (count attachments))
                       (when (seq attachments)
                         (println (str "📎 Found " (count attachments) " attachment(s)"))
                         (doseq [att attachments]
