@@ -153,6 +153,7 @@
 
       {:items incomplete-items
        :count (count incomplete-items)
+       :first-item (first incomplete-items)
        :project-id project-id})
 
     (catch Exception e
