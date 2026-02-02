@@ -135,6 +135,61 @@
        :failed (count (:attachments obs))
        :issue-id (:issue-id obs)})))
 
+(defn list-work-items-tool
+  "Pyjama tool: List all work items in the project
+  
+  Input: {} (uses default project from settings)
+  Output: {:items [{:id :name :state ...}] :count <count>}"
+  [obs]
+  (try
+    (let [settings (plane/load-settings)
+          project-id (or (:project-id obs)
+                         (:default-project settings)
+                         (-> (projects/list-projects settings)
+                             first
+                             :id))
+          work-items (items/list-work-items settings project-id)]
+
+      {:items work-items
+       :count (count work-items)
+       :project-id project-id})
+
+    (catch Exception e
+      {:error (.getMessage e)
+       :items []
+       :count 0})))
+
+(defn update-work-item-state-tool
+  "Pyjama tool: Update a work item's state
+  
+  Input: {:item-id <id> :state-id <state-uuid> :project-id <id>}
+  Output: {:success <bool> :item-id <id>}"
+  [obs]
+  (try
+    (let [settings (plane/load-settings)
+          project-id (or (:project-id obs)
+                         (:default-project settings)
+                         (-> (projects/list-projects settings)
+                             first
+                             :id))
+          item-id (:item-id obs)
+          state-id (:state-id obs)
+
+          updated (items/update-work-item settings
+                                          project-id
+                                          item-id
+                                          {:state state-id})]
+
+      {:success (boolean updated)
+       :item-id item-id
+       :state-id state-id})
+
+    (catch Exception e
+      {:error (.getMessage e)
+       :success false
+       :item-id (:item-id obs)})))
+
+
 ;; ============================================================================
 ;; Tool Registry (for Pyjama)
 ;; ============================================================================
@@ -146,7 +201,11 @@
   {:create-or-update-issue {:fn create-or-update-issue
                             :description "Create or update Plane issue from email"}
    :upload-attachments {:fn upload-attachments-tool
-                        :description "Upload email attachments to Plane issue"}})
+                        :description "Upload email attachments to Plane issue"}
+   :list-work-items {:fn list-work-items-tool
+                     :description "List all work items in the project"}
+   :update-work-item-state {:fn update-work-item-state-tool
+                            :description "Update a work item's state"}})
 
 (comment
   ;; Example usage in Pyjama agent
