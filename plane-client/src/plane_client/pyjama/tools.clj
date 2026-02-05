@@ -119,7 +119,8 @@
           email-data {:subject (:subject obs)
                       :body (:body obs)
                       :from (:from obs)
-                      :timestamp (:date obs)}
+                      :timestamp (:date obs)
+                      :attachments (:attachments obs [])}
 
           ;; DEBUG: Log the email body
           _ (println "\n🔍 DEBUG: Email body received:")
