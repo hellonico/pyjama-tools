@@ -152,13 +152,30 @@
                 _ (println "\n🔍 DEBUG: Building comment:")
                 _ (println "   From:" from-str)
                 _ (println "   Description cleaned:" (subs desc-str 0 (min 150 (count desc-str))))
-                comment (str "Email from " from-str " at " date-str ":\n\n" desc-str)]
+                comment (str "Email from " from-str " at " date-str ":\n\n" desc-str)
+
+                ;; Check if priority should be updated
+                new-priority (:priority-plane analysis)
+                old-priority (:priority existing-issue)
+                should-update-priority? (and new-priority
+                                             (not= new-priority "none")
+                                             (not= new-priority old-priority))]
+
+            ;; Add comment
             (items/add-comment settings project-id (:id existing-issue) comment)
+
+            ;; Update priority if detected in follow-up email
+            (when should-update-priority?
+              (println "   🔄 Updating priority:" old-priority "→" new-priority)
+              (items/update-work-item settings project-id (:id existing-issue)
+                                      {:priority new-priority}))
+
             {:issue-id (:id existing-issue)
              :action :updated
              :title (:name existing-issue)
              :comment-added true
-             :priority (:priority existing-issue)
+             :priority (if should-update-priority? new-priority old-priority)
+             :priority-updated should-update-priority?
              :project-id project-id
              :attachments (:attachments obs)  ; Pass through for upload step
              :has-attachments (:has-attachments obs)}))
