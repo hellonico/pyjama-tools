@@ -87,15 +87,36 @@
                                                                (.add Flags$Flag/SEEN)) true))
                                      ;; Extract and save attachments to temp files
                                      (let [email (message/read-message unread-msg)
-                                           attachments (read/save-attachments email)]
+                                           attachments (read/save-attachments email)
+                                           body (read/get-message-body email)]
                                        (when (seq attachments)
                                          (println (str "📎 Found " (count attachments) " attachment(s) in: " (:subject email))))
-                                       {:subject (:subject email)
-                                        :from (str (:from email))
-                                        :date (str (:date-sent email))
-                                        :body (read/get-message-body email)
-                                        :attachments attachments
-                                        :has-attachments (boolean (seq attachments))}))
+                                       ;; DEBUG: Log the extracted body
+                                       (println (str "\n📧 Email extracted:"))
+                                       (println (str "   Subject: " (:subject email)))
+                                       (println (str "   Body length: " (count (str body))))
+                                       (println (str "   Body preview: " (subs (str body) 0 (min 100 (count (str body))))))
+                                        ;; Extract sender properly - handle LazySeq and maps
+                                        (let [from-raw (:from email)
+                                              from-str (cond
+                                                        ;; If it's a sequential, get first element
+                                                        (sequential? from-raw)
+                                                        (let [first-elem (first from-raw)]
+                                                          (if (map? first-elem)
+                                                            (:address first-elem)
+                                                            (str first-elem)))
+                                                        ;; If it's a map, extract :address
+                                                        (map? from-raw)
+                                                        (:address from-raw)
+                                                        ;; Otherwise just convert to string
+                                                        :else
+                                                        (str from-raw))]
+                                          {:subject (:subject email)
+                                           :from from-str
+                                           :date (str (:date-sent email))
+                                           :body body
+                                           :attachments attachments
+                                           :has-attachments (boolean (seq attachments))})))
                                    unread-msgs)]
                   (println (str "✓ Retrieved " (count emails) " unread email(s)"))
                   (when mark-read

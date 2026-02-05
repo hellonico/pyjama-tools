@@ -137,6 +137,11 @@
   [settings project-id work-item-data & [opts]]
   (let [ws (or (:workspace opts) (core/get-workspace-slug settings))
         paths (build-endpoint ws project-id :create)
+        _ (println "\n🔍 DEBUG: Creating work item in Plane:")
+        _ (println "   Name:" (:name work-item-data))
+        _ (println "   Description length:" (count (str (:description work-item-data))))
+        _ (println "   Description preview:" (subs (str (:description work-item-data)) 0 (min 150 (count (str (:description work-item-data))))))
+        _ (println "   Priority:" (:priority work-item-data))
         response (try-endpoints settings :post paths
                                 (assoc opts :body work-item-data :workspace ws))]
     (if (:success response)

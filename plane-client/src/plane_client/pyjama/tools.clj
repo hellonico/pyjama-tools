@@ -5,6 +5,7 @@
             [plane-client.work-items :as items]
             [plane-client.attachments :as att]
             [plane-client.email-utils :as email-utils]
+            [plane-client.pyjama.email-confirmation :as email-confirm]
             [clojure.string :as str]))
 
 ;; ============================================================================
@@ -12,25 +13,89 @@
 ;; ============================================================================
 
 (defn extract-issue-key
-  "Extract issue key from email subject (text between [brackets])"
+  "Extract issue key from email subject.
+  
+  Looks for patterns like:
+  - [EDEMO-123] in brackets
+  - EDEMO-123 without brackets
+  - Re: [EDEMO-123] or Re: EDEMO-123
+  
+  Returns the issue key (e.g., 'EDEMO-123') or nil"
   [subject]
-  (when-let [match (re-find #"\[(.*?)\]" subject)]
-    (second match)))
-
-(defn find-existing-issue
-  "Find an existing work item by matching subject pattern"
-  [settings project-id subject]
-  (let [issue-key (extract-issue-key subject)
-        all-items (items/list-work-items settings project-id)]
-    (when issue-key
-      (first (filter #(str/includes? (:name %) issue-key) all-items)))))
+  (when subject
+    (let [result (or
+                  ;; Try to find [EDEMO-123] pattern in brackets
+                  (when-let [match (re-find #"\[([A-Z]+-\d+)\]" subject)]
+                    (second match))
+                  ;; Try to find EDEMO-123 pattern without brackets
+                  (when-let [match (re-find #"([A-Z]+-\d+)" subject)]
+                    (second match)))]
+      (println "🔍 Extracting issue key from subject:" subject)
+      (println "   → Found issue key:" (or result "NONE"))
+      result)))
 
 (defn email-subject-to-issue-title
   "Convert email subject to issue title"
   [subject]
   (-> subject
-      (str/replace #"^RE:\s*" "")
+      (str/replace #"(?i)^RE:\s*" "")  ; Case-insensitive "Re:" removal
+      (str/replace #"(?i)^FWD:\s*" "")  ; Also handle forwards
       str/trim))
+
+(defn find-existing-issue
+  "Find an existing work item by matching issue key in subject.
+  
+  Searches for the issue key in:
+  1. The work item's name field
+  2. The work item's sequence_id (e.g., EDEMO-123)
+  
+  If no issue key is found, falls back to matching by title.
+  
+  Returns the matching work item or nil"
+  [settings project-id subject]
+  (let [issue-key (extract-issue-key subject)]
+    (if issue-key
+      ;; If we have an issue key, search by key
+      (let [all-items (items/list-work-items settings project-id)
+            _ (println "   → Searching through" (count all-items) "work items for key:" issue-key)
+            _ (println "   → Checking each item:")
+            matched-item (first (filter (fn [item]
+                                          (let [item-name (str (:name item))
+                                                item-seq-id (:sequence_id item)
+                                                item-proj-id (:project_identifier item)
+                                                constructed-key (when item-seq-id
+                                                                  (str item-proj-id "-" item-seq-id))
+                                                name-match? (str/includes? item-name issue-key)
+                                                seq-match? (= issue-key constructed-key)
+                                                matches? (or name-match? seq-match?)]
+                                            (println (str "      - " item-name
+                                                          " (seq: " item-seq-id
+                                                          ", proj: " item-proj-id
+                                                          ", key: " constructed-key ")"
+                                                          (if matches? " ✓ MATCH" "")))
+                                            (when matches?
+                                              (println "   ✓ MATCH FOUND by key:" item-name "(" issue-key ")"))
+                                            matches?))
+                                        all-items))]
+        (when-not matched-item
+          (println "   → No matching issue found by key"))
+        matched-item)
+      ;; No issue key - try to match by title (for replies without keys)
+      (let [clean-subject (email-subject-to-issue-title subject)
+            _ (println "   → No issue key found, trying title match for:" clean-subject)
+            all-items (items/list-work-items settings project-id)
+            matched-item (first (filter (fn [item]
+                                          (let [matches? (= (str/lower-case (str (:name item)))
+                                                            (str/lower-case clean-subject))]
+                                            (when matches?
+                                              (println "   ✓ MATCH FOUND by title:" (:name item)))
+                                            matches?))
+                                        all-items))]
+        (when-not matched-item
+          (println "   → No matching issue found by title, will create new issue"))
+        matched-item))))
+
+
 
 ;; ============================================================================
 ;; Pyjama Tools
@@ -55,32 +120,65 @@
                       :body (:body obs)
                       :from (:from obs)
                       :timestamp (:date obs)}
+
+          ;; DEBUG: Log the email body
+          _ (println "\n🔍 DEBUG: Email body received:")
+          _ (println "   Length:" (count (str (:body obs))))
+          _ (println "   First 100 chars:" (subs (str (:body obs)) 0 (min 100 (count (str (:body obs))))))
+
           analysis (email-utils/analyze-email email-data)
+
+          ;; DEBUG: Log the analysis result
+          _ (println "\n🔍 DEBUG: Email analysis:")
+          _ (println "   Enhanced description length:" (count (str (:enhanced-description analysis))))
+          _ (println "   Priority:" (:priority-plane analysis))
 
           ;; Check if this is a follow-up to existing issue
           existing-issue (find-existing-issue settings project-id (:subject obs))]
 
       (if existing-issue
         ;; Update existing issue with comment
-        (let [comment (str "Email from " (:from obs) " at " (:date obs) ":\n\n"
-                           (:enhanced-description analysis))]
-          (items/add-comment settings project-id (:id existing-issue) comment)
-          {:issue-id (:id existing-issue)
-           :action :updated
-           :title (:name existing-issue)
-           :comment-added true
-           :priority (:priority existing-issue)
-           :project-id project-id
-           :attachments (:attachments obs)  ; Pass through for upload step
-           :has-attachments (:has-attachments obs)})
+        (do
+          (println "\n✓ Found existing issue:" (:name existing-issue))
+          (let [;; Extract sender - already fixed in registry.clj
+                from-str (str (:from obs))
+                date-str (str (:date obs))
+                ;; Clean up description - remove "Sent at:" line (handles \r\n and \n)
+                desc-raw (str (:enhanced-description analysis))
+                desc-str (-> desc-raw
+                             (str/replace #"(\r?\n){2}Sent at: [^\r\n]+(\r?\n)" "\n")
+                             (str/replace #"(\r?\n)Sent at: [^\r\n]+(\r?\n)" "\n")
+                             str/trim)
+                _ (println "\n🔍 DEBUG: Building comment:")
+                _ (println "   From:" from-str)
+                _ (println "   Description cleaned:" (subs desc-str 0 (min 150 (count desc-str))))
+                comment (str "Email from " from-str " at " date-str ":\n\n" desc-str)]
+            (items/add-comment settings project-id (:id existing-issue) comment)
+            {:issue-id (:id existing-issue)
+             :action :updated
+             :title (:name existing-issue)
+             :comment-added true
+             :priority (:priority existing-issue)
+             :project-id project-id
+             :attachments (:attachments obs)  ; Pass through for upload step
+             :has-attachments (:has-attachments obs)}))
 
         ;; Create new issue
         (let [issue-title (email-subject-to-issue-title (:subject obs))
+              ;; Clean up description for new issues too
+              desc-raw (str (:enhanced-description analysis))
+              desc-clean (-> desc-raw
+                             (str/replace #"(\r?\n){2}Sent at: [^\r\n]+(\r?\n)" "\n")
+                             (str/replace #"(\r?\n)Sent at: [^\r\n]+(\r?\n)" "\n")
+                             str/trim)
+              _ (println "\n✓ Creating new issue:" issue-title)
+              _ (println "   Description to be sent:" (subs desc-clean 0 (min 200 (count desc-clean))))
               created-issue (items/create-work-item settings
                                                     project-id
                                                     {:name issue-title
-                                                     :description (:enhanced-description analysis)
+                                                     :description_html desc-clean  ; Plane uses description_html
                                                      :priority (:priority-plane analysis)})]
+          (println "   ✓ Issue created with ID:" (:id created-issue))
           {:issue-id (:id created-issue)
            :action :created
            :title (:name created-issue)
@@ -91,6 +189,7 @@
            :has-attachments (:has-attachments obs)})))
 
     (catch Exception e
+      (println "\n❌ ERROR in create-or-update-issue:" (.getMessage e))
       {:error (.getMessage e)
        :subject (:subject obs)
        :action :error})))

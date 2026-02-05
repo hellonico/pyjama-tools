@@ -130,16 +130,23 @@
   [email]
   (let [subject (:subject email)
         body (:body email)
+        _ (println "\n🔍 DEBUG: analyze-email called:")
+        _ (println "   Raw body type:" (type body))
+        _ (println "   Raw body length:" (count (str body)))
+        _ (println "   Raw body preview:" (subs (str body) 0 (min 100 (count (str body)))))
         priority (detect-priority subject body)
         team (detect-team subject body)
         assignee (get-assignee-for-team team)
-        attachments (extract-attachments email)]
+        attachments (extract-attachments email)
+        enhanced-desc (str body (format-attachments-description attachments))
+        _ (println "   Enhanced description length:" (count (str enhanced-desc)))
+        _ (println "   Enhanced description preview:" (subs (str enhanced-desc) 0 (min 100 (count (str enhanced-desc)))))]
     {:priority priority
      :priority-plane (priority-keyword->plane priority)
      :team team
      :assignee assignee
      :attachments attachments
-     :enhanced-description (str body (format-attachments-description attachments))}))
+     :enhanced-description enhanced-desc}))
 
 (defn print-analysis
   "Pretty-print email analysis"

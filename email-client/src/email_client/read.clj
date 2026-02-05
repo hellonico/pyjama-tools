@@ -150,20 +150,72 @@
   
   Handles both plain and multipart messages."
   [msg]
-  (let [body (:body msg)]
+  (let [body (:body msg)
+        _ (println "\n🔍 DEBUG get-message-body:")
+        _ (println "   Body type:" (type body))
+        _ (println "   Body is string?:" (string? body))
+        _ (println "   Body is map?:" (map? body))
+        _ (println "   Body is sequential?:" (sequential? body))
+        _ (when (sequential? body)
+            (println "   Body count:" (count body))
+            (println "   First element:" (first body)))]
     (cond
-      ;; Plain text body
+      ;; Plain text body (string)
       (string? body)
-      body
+      (do
+        (println "   → Returning plain text body")
+        body)
+
+      ;; Single-part message (map with :content-type and :body)
+      (map? body)
+      (let [content-type (:content-type body)
+            body-text (:body body)
+            _ (println "   → Single-part message")
+            _ (println "   → Content-type:" content-type)
+            _ (println "   → Body field type:" (type body-text))]
+        (if (string? body-text)
+          (do
+            (println "   → Returning body text from map")
+            body-text)
+          (do
+            (println "   → Converting body to string")
+            (str body-text))))
 
       ;; Multipart body - extract text/plain (handles both vector and LazySeq)
       (sequential? body)
-      (let [text-part (first (filter #(= "text/plain" (:content-type %)) body))]
-        (get text-part :body ""))
+      (let [body-vec (vec body)  ; Realize LazySeq to vector
+            _ (println "   → Processing multipart body, parts:" (count body-vec))
+            ;; Try to find text/plain part (case-insensitive, handles "TEXT/PLAIN" and "text/plain")
+            text-part (first (filter (fn [part]
+                                       (when-let [ct (:content-type part)]
+                                         (re-find #"(?i)text/plain" (str ct))))
+                                     body-vec))
+            _ (println "   → Text part found:" (if text-part "YES" "NO"))
+            _ (when text-part
+                (println "   → Text part content-type:" (:content-type text-part))
+                (println "   → Text part :body type:" (type (:body text-part))))
+            ;; If no text/plain found, try the first part
+            part-to-use (or text-part (first body-vec))
+            ;; Extract the :body field from the part
+            extracted (if (map? part-to-use)
+                        (:body part-to-use)
+                        part-to-use)
+            _ (println "   → Extracted type:" (type extracted))
+            _ (println "   → Extracted preview:" (subs (str extracted) 0 (min 100 (count (str extracted)))))]
+        ;; Ensure we return a string, not a map or LazySeq
+        (if (string? extracted)
+          (do
+            (println "   → Returning extracted string")
+            extracted)
+          (do
+            (println "   → Converting to string")
+            (str extracted))))
 
       ;; Fallback
       :else
-      (str body))))
+      (do
+        (println "   → Fallback: converting to string")
+        (str body)))))
 
 (defn get-html-body
   "Extract HTML body from message map.
@@ -178,10 +230,13 @@
         (get html-part :body)))))
 
 (defn extract-filename-from-content-type
-  "Extract filename from content-type header like 'application/pdf; name=file.pdf'"
+  "Extract filename from content-type header like 'application/pdf; name=file.pdf'
+  Handles both quoted and unquoted filenames:
+  - name=\"file name.png\" (quoted, with spaces)
+  - name=file.png (unquoted, no spaces)"
   [content-type]
   (when content-type
-    (when-let [match (re-find #"name=([^\s;]+)" content-type)]
+    (when-let [match (re-find #"name=\"?([^\";\s]+(?:\s+[^\";\s]+)*)\"?" content-type)]
       (second match))))
 
 (defn save-attachments
@@ -196,12 +251,11 @@
   (let [body (:body msg)]
     (when (sequential? body)  ; Changed from vector? to sequential? to handle LazySeq
       (->> body
-           ;; Filter for non-text parts that have a filename in content-type
+           ;; Filter for parts that have a filename (attachments)
+           ;; Allow any content-type as long as it has a filename parameter
            (filter (fn [part]
                      (let [ct (:content-type part)]
                        (and ct
-                            (not (clojure.string/starts-with?
-                                  (clojure.string/upper-case ct) "TEXT/"))
                             (extract-filename-from-content-type ct)))))
            (map (fn [part]
                   (let [content-type (:content-type part)
