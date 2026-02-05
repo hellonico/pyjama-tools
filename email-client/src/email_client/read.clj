@@ -183,7 +183,13 @@
 
       ;; Multipart body - extract text/plain (handles both vector and LazySeq)
       (sequential? body)
-      (let [body-vec (vec body)  ; Realize LazySeq to vector
+      (let [;; Realize LazySeq to vector and handle nested LazySeqs
+            body-vec (mapv (fn [part]
+                             ;; If part is a LazySeq, realize it and get first element
+                             (if (and (sequential? part) (not (map? part)))
+                               (first (vec part))
+                               part))
+                           (vec body))
             _ (println "   → Processing multipart body, parts:" (count body-vec))
             ;; Try to find text/plain part (case-insensitive, handles "TEXT/PLAIN" and "text/plain")
             text-part (first (filter (fn [part]
@@ -201,7 +207,7 @@
                         (:body part-to-use)
                         part-to-use)
             _ (println "   → Extracted type:" (type extracted))
-            _ (println "   → Extracted preview:" (subs (str extracted) 0 (min 100 (count (str extracted)))))]
+            _ (println "   → Extracted preview:" (subs (str extracted) 0 (min 100 (count (str extracted)))))]\
         ;; Ensure we return a string, not a map or LazySeq
         (if (string? extracted)
           (do
