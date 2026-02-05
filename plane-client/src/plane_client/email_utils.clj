@@ -137,8 +137,16 @@
         priority (detect-priority subject body)
         team (detect-team subject body)
         assignee (get-assignee-for-team team)
-        attachments (extract-attachments email)
-        enhanced-desc (str body (format-attachments-description attachments))
+        ;; Use real attachments from email observation, not simulated ones
+        attachments (:attachments email [])
+        ;; Format attachment list for description if attachments exist
+        attachment-desc (when (seq attachments)
+                          (str "\n\n### Attachments\n"
+                               (str/join "\n"
+                                         (map #(str "- **" (:filename %) "** ("
+                                                    (or (:size %) "unknown size") ")")
+                                              attachments))))
+        enhanced-desc (str body attachment-desc)
         _ (println "   Enhanced description length:" (count (str enhanced-desc)))
         _ (println "   Enhanced description preview:" (subs (str enhanced-desc) 0 (min 100 (count (str enhanced-desc)))))]
     {:priority priority
