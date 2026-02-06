@@ -48,6 +48,31 @@
     "none"))
 
 ;; ============================================================================
+;; Email Filtering
+;; ============================================================================
+
+(defn should-process-email?
+  "Check if email should be processed based on subject filter.
+  
+  Returns true if subject contains [plane] tag (case-insensitive)."
+  [subject]
+  (when subject
+    (boolean (re-find #"(?i)\[plane\]" subject))))
+
+(defn clean-subject
+  "Remove [plane] tag from subject.
+  
+  Examples:
+  - '[plane] Bug report' -> 'Bug report'
+  - '[PLANE] Feature request' -> 'Feature request'
+  - 'Re: [plane] Bug report' -> 'Re: Bug report'"
+  [subject]
+  (when subject
+    (-> subject
+        (str/replace #"(?i)\[plane\]\s*" "")
+        str/trim)))
+
+;; ============================================================================
 ;; Assignment Detection
 ;; ============================================================================
 

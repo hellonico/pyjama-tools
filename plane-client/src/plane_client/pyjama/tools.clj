@@ -105,18 +105,34 @@
   "Pyjama tool: Create or update Plane issue from email
   
   Input: Email observation with :from, :subject, :body, :date
-  Output: {:issue-id <id> :action :created | :updated :title <title>}"
+  Output: {:issue-id <id> :action :created | :updated :title <title>}
+  
+  Note: Only processes emails with [plane] tag in subject"
   [obs]
   (try
-    (let [settings (plane/load-settings)
+    (let [raw-subject (:subject obs)
+
+          ;; Check if email should be processed
+          _ (when-not (email-utils/should-process-email? raw-subject)
+              (println "\n⏭️  Skipping email (no [plane] tag):" raw-subject)
+              (throw (ex-info "Email filtered out"
+                              {:reason :no-plane-tag
+                               :subject raw-subject
+                               :action :skipped})))
+
+          ;; Clean subject by removing [plane] tag
+          clean-subject (email-utils/clean-subject raw-subject)
+          _ (println "\n📧 Processing email:" clean-subject)
+
+          settings (plane/load-settings)
           ;; Get project from settings or use default/first
           project-id (or (:default-project settings)
                          (-> (projects/list-projects settings)
                              first
                              :id))
 
-          ;; Analyze email
-          email-data {:subject (:subject obs)
+          ;; Analyze email (use cleaned subject)
+          email-data {:subject clean-subject
                       :body (:body obs)
                       :from (:from obs)
                       :timestamp (:date obs)
@@ -134,8 +150,8 @@
           _ (println "   Enhanced description length:" (count (str (:enhanced-description analysis))))
           _ (println "   Priority:" (:priority-plane analysis))
 
-          ;; Check if this is a follow-up to existing issue
-          existing-issue (find-existing-issue settings project-id (:subject obs))]
+          ;; Check if this is a follow-up to existing issue (use cleaned subject)
+          existing-issue (find-existing-issue settings project-id clean-subject)]
 
       (if existing-issue
         ;; Update existing issue with comment
