@@ -21,7 +21,10 @@
         path (str "/api/v1/workspaces/" ws "/projects/" project-id "/labels/")
         response (core/get-request settings path {:workspace ws})]
     (if (:success response)
-      (:data response)
+      (let [data (:data response)]
+        (if (map? data)
+          (or (:results data) [data])
+          data))
       (do
         (println "Failed to list labels:" (:error response))
         []))))
@@ -40,11 +43,11 @@
     (let [labels (list-labels settings project-id)
           label-name-lower (str/lower-case (str label-name))]
       (first
-        (filter
-          (fn [label]
-            (= label-name-lower
-               (str/lower-case (str (:name label)))))
-          labels)))))
+       (filter
+        (fn [label]
+          (= label-name-lower
+             (str/lower-case (str (:name label)))))
+        labels)))))
 
 (defn create-label
   "Create a new label in a project.

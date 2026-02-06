@@ -2,7 +2,8 @@
   "Core HTTP client for Plane API"
   (:require [clj-http.client :as http]
             [cheshire.core :as json]
-            [secrets.core :as secrets]))
+            [secrets.core :as secrets]
+            [clojure.string :as str]))
 
 ;; ============================================================================
 ;; Configuration Loading
