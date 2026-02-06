@@ -240,10 +240,10 @@
             (let [updates (cond-> {}
                             should-update-priority? (assoc :priority new-priority)
                             state-id (assoc :state state-id)
-                            (seq label-ids) (assoc :label_ids label-ids)
+                            (seq label-ids) (assoc :labels label-ids)
                             start-date (assoc :start_date start-date)
-                            due-date (assoc :target_date due-date))]
-                            assignee-id (assoc :assignee_ids [assignee-id])
+                            due-date (assoc :target_date due-date)
+                            assignee-id (assoc :assignees [assignee-id]))]
               (when (seq updates)
                 (println "   🔄 Updating fields:" (keys updates))
                 (items/update-work-item settings project-id (:id existing-issue) updates)))
@@ -273,11 +273,11 @@
                                                     (cond-> {:name issue-title
                                                              :description_html desc-clean
                                                              :priority (:priority-plane analysis)}
-                                                      state-id (assoc :state_id state-id)
-                                                      (seq label-ids) (assoc :label_ids label-ids)
+                                                      state-id (assoc :state state-id)
+                                                      (seq label-ids) (assoc :labels label-ids)
                                                       start-date (assoc :start_date start-date)
-                                                      due-date (assoc :target_date due-date)))]
-                                                      assignee-id (assoc :assignee_ids [assignee-id])
+                                                      due-date (assoc :target_date due-date)
+                                                      assignee-id (assoc :assignees [assignee-id])))]
           (println "   ✓ Issue created with ID:" (:id created-issue))
           {:issue-id (:id created-issue)
            :action :created
