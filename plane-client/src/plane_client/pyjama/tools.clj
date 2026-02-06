@@ -209,9 +209,9 @@
           existing-issue (find-existing-issue settings project-id clean-subject)]
 
       (if existing-issue
-        ;; Update existing issue with comment
-        (do
-          (println "\n✓ Found existing issue:" (:name existing-issue))
+        (let [project (first (filter #(= (:id %) project-id) (projects/list-projects settings)))
+              human-id (str (:identifier project) "-" (:sequence_id existing-issue))]
+          (println "\n✓ Found existing issue:" human-id ":" (:name existing-issue))
           (let [;; Extract sender - already fixed in registry.clj
                 from-str (str (:from obs))
                 date-str (str (:date obs))
@@ -278,7 +278,9 @@
                                                       start-date (assoc :start_date start-date)
                                                       due-date (assoc :target_date due-date)
                                                       assignee-id (assoc :assignees [assignee-id])))]
-          (println "   ✓ Issue created with ID:" (:id created-issue))
+          (let [project (first (filter #(= (:id %) project-id) (projects/list-projects settings)))
+                human-id (str (:identifier project) "-" (:sequence_id created-issue))]
+            (println "   ✓ Issue created:" human-id))
           {:issue-id (:id created-issue)
            :action :created
            :title (:name created-issue)
