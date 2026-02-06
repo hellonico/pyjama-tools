@@ -1,6 +1,7 @@
 (ns plane-client.projects
   "Plane API client for Projects"
-  (:require [plane-client.core :as core]))
+  (:require [plane-client.core :as core]
+            [clojure.string :as str]))
 
 ;; ============================================================================
 ;; Project Operations
@@ -112,6 +113,35 @@
       (do
         (println "✗ Failed to delete project:" (:error response))
         false))))
+
+(defn find-project-by-identifier
+  "Find a project by its identifier or slug.
+  
+  Parameters:
+  - settings: Plane settings map
+  - identifier: Project identifier (e.g., 'EDEMO', 'PROJ') or project slug
+  - workspace: Workspace slug (optional)
+  
+  Returns: Project map or nil if not found
+  
+  Examples:
+  - (find-project-by-identifier settings 'EDEMO')
+  - (find-project-by-identifier settings 'my-project-slug')"
+  [settings identifier & [{:keys [workspace]}]]
+  (when identifier
+    (let [projects (list-projects settings {:workspace workspace})
+          identifier-lower (str/lower-case (str identifier))]
+      (first
+       (filter
+        (fn [project]
+          (or
+           ;; Match by identifier (case-insensitive)
+           (= identifier-lower (str/lower-case (str (:identifier project))))
+           ;; Match by slug (case-insensitive)
+           (= identifier-lower (str/lower-case (str (:slug project))))
+           ;; Match by name (case-insensitive)
+           (= identifier-lower (str/lower-case (str (:name project))))))
+        projects)))))
 
 ;; ============================================================================
 ;; Display Helpers

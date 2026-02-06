@@ -133,11 +133,28 @@
               (println "\n📧 Processing email (no filter):" clean-subject)
               (println "\n📧 Processing email:" clean-subject))
 
+
           ;; Get project from settings or use default/first
-          project-id (or (:default-project settings)
-                         (-> (projects/list-projects settings)
-                             first
-                             :id))
+          ;; :default-project can be:
+          ;; - Project UUID (e.g., "e9a526c9-3ac1-4b10-9437-fa46003ec55a")
+          ;; - Project identifier (e.g., "EDEMO")
+          ;; - Project slug (e.g., "my-project")
+          project-id (or
+                      ;; Try :default-project from settings
+                      (when-let [default-proj (:default-project settings)]
+                        (or
+                         ;; If it looks like a UUID, use it directly
+                         (when (re-matches #"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+                                           (str default-proj))
+                           default-proj)
+                         ;; Otherwise, try to find by identifier/slug
+                         (when-let [found-project (projects/find-project-by-identifier settings default-proj)]
+                           (:id found-project))))
+                      ;; Fall back to first project
+                      (-> (projects/list-projects settings)
+                          first
+                          :id))
+
 
           ;; Analyze email (use cleaned subject)
           email-data {:subject clean-subject
