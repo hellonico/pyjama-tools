@@ -8,6 +8,7 @@
             [plane-client.pyjama.email-confirmation :as email-confirm]
             [plane-client.states :as states]
             [plane-client.labels :as labels]
+            [plane-client.users :as users]
 
             [clojure.string :as str]))
 
@@ -192,10 +193,17 @@
           start-date (:start-date analysis)
           due-date (:due-date analysis)
 
+          assignee-id (when-let [assignee-identifier (:assignee-email analysis)]
+                        (when-let [user-id (users/find-user settings assignee-identifier)]
+                          (do
+                            (println "   👤 Assignee found:" assignee-identifier "→" user-id)
+                            user-id)))
+
           _ (when state-id (println "   🔄 Will set state to ID:" state-id))
           _ (when (seq label-ids) (println "   📌 Will set labels to IDs:" label-ids))
           _ (when start-date (println "   📅 Start date:" start-date))
           _ (when due-date (println "   📅 Due date:" due-date))
+          _ (when assignee-id (println "   👤 Will assign to ID:" assignee-id))
 
           ;; Check if this is a follow-up to existing issue (use cleaned subject)
           existing-issue (find-existing-issue settings project-id clean-subject)]
@@ -232,9 +240,10 @@
             (let [updates (cond-> {}
                             should-update-priority? (assoc :priority new-priority)
                             state-id (assoc :state state-id)
-                            (seq label-ids) (assoc :labels label-ids)
+                            (seq label-ids) (assoc :label_ids label-ids)
                             start-date (assoc :start_date start-date)
                             due-date (assoc :target_date due-date))]
+                            assignee-id (assoc :assignee_ids [assignee-id])
               (when (seq updates)
                 (println "   🔄 Updating fields:" (keys updates))
                 (items/update-work-item settings project-id (:id existing-issue) updates)))
@@ -264,10 +273,11 @@
                                                     (cond-> {:name issue-title
                                                              :description_html desc-clean
                                                              :priority (:priority-plane analysis)}
-                                                      state-id (assoc :state state-id)
-                                                      (seq label-ids) (assoc :labels label-ids)
+                                                      state-id (assoc :state_id state-id)
+                                                      (seq label-ids) (assoc :label_ids label-ids)
                                                       start-date (assoc :start_date start-date)
                                                       due-date (assoc :target_date due-date)))]
+                                                      assignee-id (assoc :assignee_ids [assignee-id])
           (println "   ✓ Issue created with ID:" (:id created-issue))
           {:issue-id (:id created-issue)
            :action :created
