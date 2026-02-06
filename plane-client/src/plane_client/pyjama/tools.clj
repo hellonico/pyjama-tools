@@ -7,7 +7,9 @@
             [plane-client.email-utils :as email-utils]
             [plane-client.pyjama.email-confirmation :as email-confirm]
             [plane-client.states :as states]
-            [plane-client.labels :as labels]            [clojure.string :as str]))
+            [plane-client.labels :as labels]
+
+            [clojure.string :as str]))
 
 ;; ============================================================================
 ;; Helper Functions
@@ -177,19 +179,19 @@
           _ (println "   Priority:" (:priority-plane analysis))
           ;; Process extracted fields from email
           state-id (when-let [state-name (:state analysis)]
-                    (when-let [state (states/find-state-by-name settings project-id state-name)]
-                      (do
-                        (println "   🔄 State found:" state-name "→" (:id state))
-                        (:id state))))
-          
+                     (when-let [state (states/find-state-by-name settings project-id state-name)]
+                       (do
+                         (println "   🔄 State found:" state-name "→" (:id state))
+                         (:id state))))
+
           label-ids (when-let [label-names (:labels analysis)]
-                     (do
-                       (println "   📌 Processing labels:" label-names)
-                       (labels/get-or-create-labels settings project-id label-names)))
-          
+                      (do
+                        (println "   📌 Processing labels:" label-names)
+                        (labels/get-or-create-labels settings project-id label-names)))
+
           start-date (:start-date analysis)
           due-date (:due-date analysis)
-          
+
           _ (when state-id (println "   🔄 Will set state to ID:" state-id))
           _ (when (seq label-ids) (println "   📌 Will set labels to IDs:" label-ids))
           _ (when start-date (println "   📅 Start date:" start-date))
@@ -228,11 +230,11 @@
 
             ;; Update fields if detected in follow-up email
             (let [updates (cond-> {}
-                           should-update-priority? (assoc :priority new-priority)
-                           state-id (assoc :state state-id)
-                           (seq label-ids) (assoc :label_ids label-ids)
-                           start-date (assoc :start_date start-date)
-                           due-date (assoc :target_date due-date))]
+                            should-update-priority? (assoc :priority new-priority)
+                            state-id (assoc :state state-id)
+                            (seq label-ids) (assoc :label_ids label-ids)
+                            start-date (assoc :start_date start-date)
+                            due-date (assoc :target_date due-date))]
               (when (seq updates)
                 (println "   🔄 Updating fields:" (keys updates))
                 (items/update-work-item settings project-id (:id existing-issue) updates)))
