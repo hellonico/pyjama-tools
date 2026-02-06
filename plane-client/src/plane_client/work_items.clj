@@ -1,65 +1,37 @@
 (ns plane-client.work-items
-  "Plane API client for Work Items (Issues)"
-  (:require [plane-client.core :as core]
-            [clojure.java.io :as io]
-            [clj-http.client :as http]
-            [clojure.string]))
+       "Plane API client for Work Items (Issues)"
+       (:require [plane-client.core :as core]
+                 [clojure.java.io :as io]
+                 [clj-http.client :as http]
+                 [clojure.string]))
 
-;; ============================================================================
-;; Endpoint Configuration
-;; ============================================================================
+     ;; ============================================================================
+     ;; Endpoint Configuration
+     ;; ============================================================================
 
-(def ^:private endpoint-paths
-  "Plane API endpoint paths - tries new endpoints first, falls back to legacy"
-  {:list ["work-items" "issues"]          ; New first, then legacy
-   :get ["work-items" "issues"]
-   :create ["work-items" "issues"]
-   :update ["work-items" "issues"]
-   :delete ["work-items" "issues"]
-   :search ["search-work-items" "search-issues"]})
+     (def ^:private endpoint-paths
+       "Plane API endpoint paths - tries new endpoints first, falls back to legacy"
+       {:list ["work-items" "issues"]          ; New first, then legacy
+        :get ["work-items" "issues"]
+        :create ["work-items" "issues"]
+        :update ["work-items" "issues"]
+        :delete ["work-items" "issues"]
+        :search ["search-work-items" "search-issues"]})
 
-(defn- build-endpoint
-  "Build endpoint path for work items operations.
+     (defn- build-endpoint
+       "Build endpoint path for work items operations.
   
   Supports both new (/work-items/) and legacy (/issues/) endpoints.
   Returns a vector of paths to try in order."
-  [workspace project-id operation & [item-id]]
-  (let [base (str "/api/v1/workspaces/" workspace "/projects/" project-id "/")
-        paths (get endpoint-paths operation ["issues"])]
-    (if item-id
-      ;; Individual item operations
-      (mapv #(str base % "/" item-id "/") paths)
-      ;; List/create operations
-      (mapv #(str base % "/") paths))))
+       [workspace project-id operation & [item-id]]
+       (let [base (str "/api/v1/workspaces/" workspace "/projects/" project-id "/")
+             paths (get endpoint-paths operation ["issues"])]
+         (if item-id
+           ;; Individual item operations
+           (mapv #(str base % "/" item-id "/") paths)
+           ;; List/create operations
+           (mapv #(str base % "/") paths))))
 
-(defn- try-endpoints
-  "Try multiple endpoint paths with automatic fallback.
-  
-  Attempts each path in order until one succeeds or all fail.
-  This provides forward and backward compatibility."
-  [settings method paths opts]
-  (loop [remaining-paths paths
-         last-response nil]
-    (if (empty? remaining-paths)
-      ;; All paths failed, return last error
-      (or last-response
-          {:success false
-           :error :all-endpoints-failed
-           :message "All endpoint paths failed"})
-
-      (let [path (first remaining-paths)
-            response (core/request settings method path opts)]
-
-        (if (:success response)
-          ;; Success! Return immediately
-          response
-          ;; Try next path on 404, otherwise return error
-          (if (= 404 (:status response))
-            (recur (rest remaining-paths) response)
-            response))))))
-
-;; ============================================================================
-;; Work Item Operations
 ;; ============================================================================
 
 (defn list-work-items
@@ -83,7 +55,7 @@
         query-params (cond-> {}
                        (:state opts) (assoc :state (:state opts))
                        (:assignee opts) (assoc :assignees (:assignee opts)))
-        response (try-endpoints settings :get paths
+        response (core/try-endpoints settings :get paths
                                 (-> opts
                                     (assoc :workspace ws)
                                     (assoc :query-params query-params)))]
@@ -112,7 +84,7 @@
   [settings project-id work-item-id & [opts]]
   (let [ws (or (:workspace opts) (core/get-workspace-slug settings))
         paths (build-endpoint ws project-id :get work-item-id)
-        response (try-endpoints settings :get paths {:workspace ws})]
+        response (core/try-endpoints settings :get paths {:workspace ws})]
     (when (:success response)
       (:data response))))
 
@@ -142,7 +114,7 @@
         _ (println "   Description length:" (count (str (:description work-item-data))))
         _ (println "   Description preview:" (subs (str (:description work-item-data)) 0 (min 150 (count (str (:description work-item-data))))))
         _ (println "   Priority:" (:priority work-item-data))
-        response (try-endpoints settings :post paths
+        response (core/try-endpoints settings :post paths
                                 (assoc opts :body work-item-data :workspace ws))]
     (if (:success response)
       (do
@@ -168,7 +140,7 @@
   [settings project-id work-item-id updates & [opts]]
   (let [ws (or (:workspace opts) (core/get-workspace-slug settings))
         paths (build-endpoint ws project-id :update work-item-id)
-        response (try-endpoints settings :patch paths
+        response (core/try-endpoints settings :patch paths
                                 (assoc opts :body updates :workspace ws))]
     (if (:success response)
       (do
@@ -193,7 +165,7 @@
   [settings project-id work-item-id & [opts]]
   (let [ws (or (:workspace opts) (core/get-workspace-slug settings))
         paths (build-endpoint ws project-id :delete work-item-id)
-        response (try-endpoints settings :delete paths {:workspace ws})]
+        response (core/try-endpoints settings :delete paths {:workspace ws})]
     (if (:success response)
       (do
         (println "✓ Work item deleted")
@@ -217,7 +189,7 @@
   [settings project-id query & [opts]]
   (let [ws (or (:workspace opts) (core/get-workspace-slug settings))
         paths (build-endpoint ws project-id :search)
-        response (try-endpoints settings :get paths
+        response (core/try-endpoints settings :get paths
                                 {:workspace ws
                                  :query-params {:search query}})]
     (if (:success response)
@@ -287,7 +259,7 @@
                        (str base "issues/" work-item-id "/attachments/")]
           creds-body {:name filename
                       :size file-size}
-          creds-response (try-endpoints settings :post creds-paths
+          creds-response (core/try-endpoints settings :post creds-paths
                                         {:workspace ws
                                          :body creds-body})]
 
@@ -318,7 +290,7 @@
                 (let [complete-paths [(str base "work-items/" work-item-id "/attachments/" asset-id "/")
                                       (str base "issues/" work-item-id "/attachments/" asset-id "/")]
                       complete-body {:asset_id asset-id}
-                      complete-response (try-endpoints settings :patch complete-paths
+                      complete-response (core/try-endpoints settings :patch complete-paths
                                                        {:workspace ws
                                                         :body complete-body})]
 
@@ -348,7 +320,7 @@
                (str base "issues/" work-item-id "/attachments/")
                (str "/api/workspaces/" ws "/file-assets/?issue=" work-item-id)
                (str "/api/assets/v2/workspaces/" ws "/issues/" work-item-id "/")]
-        response (try-endpoints settings :get paths {:workspace ws})]
+        response (core/try-endpoints settings :get paths {:workspace ws})]
 
     (if (:success response)
       (let [data (:data response)]
@@ -456,7 +428,7 @@
         paths [(str base "work-items/" work-item-id "/comments/")
                (str base "issues/" work-item-id "/comments/")]
         comment-html (str "<p>" comment "</p>")
-        response (try-endpoints settings :post paths
+        response (core/try-endpoints settings :post paths
                                 (assoc opts
                                        :body {:comment_html comment-html}
                                        :workspace ws))]
@@ -485,7 +457,7 @@
         base (str "/api/v1/workspaces/" ws "/projects/" project-id "/")
         paths [(str base "work-items/" work-item-id "/comments/")
                (str base "issues/" work-item-id "/comments/")]
-        response (try-endpoints settings :get paths {:workspace ws})]
+        response (core/try-endpoints settings :get paths {:workspace ws})]
     (if (:success response)
       (let [data (:data response)]
         (if (map? data)

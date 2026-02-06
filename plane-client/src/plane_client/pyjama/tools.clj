@@ -194,7 +194,7 @@
           due-date (:due-date analysis)
 
           assignee-id (when-let [assignee-identifier (:assignee-email analysis)]
-                        (when-let [user-id (users/find-user settings assignee-identifier)]
+                        (when-let [user-id (users/find-user settings assignee-identifier {:project-id project-id})]
                           (do
                             (println "   👤 Assignee found:" assignee-identifier "→" user-id)
                             user-id)))

@@ -1,6 +1,7 @@
 (ns plane-client.states
   "Plane API client for States"
-  (:require [plane-client.core :as core]))
+  (:require [plane-client.core :as core]
+            [clojure.string :as str]))
 
 ;; ============================================================================
 ;; State Operations
@@ -20,7 +21,10 @@
         path (str "/api/v1/workspaces/" ws "/projects/" project-id "/states/")
         response (core/get-request settings path {:workspace ws})]
     (if (:success response)
-      (:data response)
+      (let [data (:data response)]
+        (if (map? data)
+          (or (:results data) [data])
+          data))
       (do
         (println "Failed to list states:" (:error response))
         []))))
@@ -37,10 +41,10 @@
   [settings project-id state-name]
   (when state-name
     (let [states (list-states settings project-id)
-          state-name-lower (clojure.string/lower-case (str state-name))]
+          state-name-lower (str/lower-case (str state-name))]
       (first
        (filter
         (fn [state]
           (= state-name-lower
-             (clojure.string/lower-case (str (:name state)))))
+             (str/lower-case (str (:name state)))))
         states)))))

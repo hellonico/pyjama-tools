@@ -158,6 +158,32 @@
          :message (.getMessage e)
          :exception e}))))
 
+(defn try-endpoints
+  "Try multiple endpoint paths with automatic fallback.
+  
+  Attempts each path in order until one succeeds or all fail.
+  This provides forward and backward compatibility."
+  [settings method paths opts]
+  (loop [remaining-paths paths
+         last-response nil]
+    (if (empty? remaining-paths)
+      ;; All paths failed, return last error
+      (or last-response
+          {:success false
+           :error :all-endpoints-failed
+           :message "All endpoint paths failed"})
+
+      (let [path (first remaining-paths)
+            response (request settings method path opts)]
+
+        (if (:success response)
+          ;; Success! Return immediately
+          response
+          ;; Try next path on 404, otherwise return error
+          (if (= 404 (:status response))
+            (recur (rest remaining-paths) response)
+            response))))))
+
 (defn get-request
   "Make a GET request"
   [settings path & [opts]]
