@@ -29,8 +29,15 @@
         (println "Failed to list labels:" (:error response))
         []))))
 
+(defn- normalize-name [n]
+  (when n
+    (-> (str n)
+        (str/lower-case)
+        (str/replace #"[-_]" " ")
+        (str/trim))))
+
 (defn find-label-by-name
-  "Find a label by name (case-insensitive).
+  "Find a label by name (case-insensitive and hyphen-flexible).
   
   Parameters:
   - settings: Plane settings map
@@ -41,12 +48,11 @@
   [settings project-id label-name]
   (when label-name
     (let [labels (list-labels settings project-id)
-          label-name-lower (str/lower-case (str label-name))]
+          target-norm (normalize-name label-name)]
       (first
        (filter
         (fn [label]
-          (= label-name-lower
-             (str/lower-case (str (:name label)))))
+          (= target-norm (normalize-name (:name label))))
         labels)))))
 
 (defn create-label

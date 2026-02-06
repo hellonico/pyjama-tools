@@ -29,22 +29,30 @@
         (println "Failed to list states:" (:error response))
         []))))
 
+(defn- normalize-name [n]
+  (when n
+    (-> (str n)
+        (str/lower-case)
+        (str/replace #"[-_]" " ")
+        (str/trim))))
+
 (defn find-state-by-name
-  "Find a state by name (case-insensitive).
+  "Find a state by name (case-insensitive and hyphen-flexible).
+  
+  Matches 'in-progress' to 'In Progress', etc.
   
   Parameters:
   - settings: Plane settings map
   - project-id: Project ID
-  - state-name: State name to find (e.g., 'in-progress', 'done')
+  - state-name: State name to find
   
   Returns: State map or nil"
   [settings project-id state-name]
   (when state-name
     (let [states (list-states settings project-id)
-          state-name-lower (str/lower-case (str state-name))]
+          target-norm (normalize-name state-name)]
       (first
        (filter
         (fn [state]
-          (= state-name-lower
-             (str/lower-case (str (:name state)))))
+          (= target-norm (normalize-name (:name state))))
         states)))))
