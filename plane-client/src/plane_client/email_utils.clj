@@ -67,7 +67,7 @@
   - (should-process-email? '[plane] Bug' 'plane') => true (has tag)
   - (should-process-email? 'Bug report' 'plane') => false (missing tag)"
   ([subject]
-   (should-process-email? subject "plane"))
+   (should-process-email? subject nil))
   ([subject filter-tag]
    (if (or (nil? filter-tag) (empty? filter-tag))
      ;; No filter configured - process all emails
@@ -90,7 +90,7 @@
   - (clean-subject 'Bug report' 'plane') => 'Bug report'
   - (clean-subject '[plane] Bug' nil) => '[plane] Bug' (no cleaning)"
   ([subject]
-   (clean-subject subject "plane"))
+   (clean-subject subject nil))
   ([subject filter-tag]
    (if (or (nil? filter-tag) (empty? filter-tag) (nil? subject))
      ;; No filter or no subject - return as-is
