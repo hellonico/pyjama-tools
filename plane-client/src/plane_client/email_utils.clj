@@ -201,6 +201,24 @@
         (-> (second match)
             str/trim)))))
 
+(defn extract-start-date
+  "Extract start date from email body.
+  
+  Looks for patterns like:
+  - Start date: 2026-02-06
+  - Start: 2026-02-06
+  - Starts: 2026-02-10
+  
+  Returns: date string or nil"
+  [body]
+  (when body
+    (let [text (str body)
+          pattern #"(?i)start(?:s)?(?:\s+date)?:\s*([^\n,;]+)"
+          match (re-find pattern text)]
+      (when match
+        (-> (second match)
+            str/trim)))))
+
 (defn extract-due-date
   "Extract due date from email body.
   
@@ -290,27 +308,30 @@
         
         ;; Extract additional fields from email body
         labels (extract-labels body)
-        state (extract-state body)
-        assignee-email (extract-assignee body)
-        due-date (extract-due-date body)
-        
-        _ (when labels (println "   📌 Labels extracted:" labels))
-        _ (when state (println "   🔄 State extracted:" state))
-        _ (when assignee-email (println "   👤 Assignee extracted:" assignee-email))
-        _ (when due-date (println "   📅 Due date extracted:" due-date))]
-    {:priority priority
-     :priority-plane (priority-keyword->plane priority)
-     :team team
-     :assignee assignee
-     :attachments attachments
-     :enhanced-description enhanced-desc
-     ;; New extracted fields
-     :labels labels
-     :state state
-     :assignee-email assignee-email
+   state (extract-state body)
+   assignee-email (extract-assignee body)
+   start-date (extract-start-date body)
+   due-date (extract-due-date body)
+
+   _ (when labels (println "   📌 Labels extracted:" labels))
+   _ (when state (println "   🔄 State extracted:" state))
+   _ (when assignee-email (println "   👤 Assignee extracted:" assignee-email))
+   _ (when start-date (println "   📅 Start date extracted:" start-date))
+   _ (when due-date (println "   📅 Due date extracted:" due-date))]
+  {:priority priority
+   :priority-plane (priority-keyword->plane priority)
+   :team team
+   :assignee assignee
+   :attachments attachments
+   :enhanced-description enhanced-desc
+   ;; New extracted fields
+   :labels labels
+   :state state
+   :assignee-email assignee-email
+   :start-date start-date
+   :due-date due-date}))
      :due-date due-date}))
 
-(defn print-analysis
   "Pretty-print email analysis"
   [analysis]
   (println "\n📊 Email Analysis:")

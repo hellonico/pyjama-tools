@@ -232,7 +232,7 @@
             (let [updates (cond-> {}
                             should-update-priority? (assoc :priority new-priority)
                             state-id (assoc :state state-id)
-                            (seq label-ids) (assoc :labels label-ids)
+                            (seq label-ids) (assoc :label_ids label-ids)
                             start-date (assoc :start_date start-date)
                             due-date (assoc :target_date due-date))]
               (when (seq updates)
@@ -265,7 +265,7 @@
                                                              :description_html desc-clean
                                                              :priority (:priority-plane analysis)}
                                                       state-id (assoc :state state-id)
-                                                      (seq label-ids) (assoc :labels label-ids)
+                                                      (seq label-ids) (assoc :label_ids label-ids)
                                                       start-date (assoc :start_date start-date)
                                                       due-date (assoc :target_date due-date)))]
           (println "   ✓ Issue created with ID:" (:id created-issue))

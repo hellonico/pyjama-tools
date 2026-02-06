@@ -67,7 +67,7 @@
         (println "✓ Label created:" (:name label-data))
         (:data response))
       (do
-        (println "✗ Failed to create label:\" (:error response))
+        (println "✗ Failed to create label:" (:error response))
         nil))))
 
 (defn get-or-create-label
