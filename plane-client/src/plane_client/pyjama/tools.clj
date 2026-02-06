@@ -107,24 +107,32 @@
   Input: Email observation with :from, :subject, :body, :date
   Output: {:issue-id <id> :action :created | :updated :title <title>}
   
-  Note: Only processes emails with [plane] tag in subject"
+  Configuration (in secrets.edn):
+  - :email-filter-tag - Optional tag for filtering (e.g., 'plane'). 
+                        If nil/empty, all emails are processed.
+                        If set, only emails with [tag] in subject are processed.
+  - :default-project - Optional project ID to use (otherwise uses first project)"
   [obs]
   (try
-    (let [raw-subject (:subject obs)
+    (let [settings (plane/load-settings)
+          filter-tag (:email-filter-tag settings)
+          raw-subject (:subject obs)
 
           ;; Check if email should be processed
-          _ (when-not (email-utils/should-process-email? raw-subject)
-              (println "\n⏭️  Skipping email (no [plane] tag):" raw-subject)
+          _ (when-not (email-utils/should-process-email? raw-subject filter-tag)
+              (println "\n⏭️  Skipping email (no [" filter-tag "] tag):" raw-subject)
               (throw (ex-info "Email filtered out"
-                              {:reason :no-plane-tag
+                              {:reason :no-filter-tag
+                               :filter-tag filter-tag
                                :subject raw-subject
                                :action :skipped})))
 
-          ;; Clean subject by removing [plane] tag
-          clean-subject (email-utils/clean-subject raw-subject)
-          _ (println "\n📧 Processing email:" clean-subject)
+          ;; Clean subject by removing filter tag
+          clean-subject (email-utils/clean-subject raw-subject filter-tag)
+          _ (if (or (nil? filter-tag) (empty? filter-tag))
+              (println "\n📧 Processing email (no filter):" clean-subject)
+              (println "\n📧 Processing email:" clean-subject))
 
-          settings (plane/load-settings)
           ;; Get project from settings or use default/first
           project-id (or (:default-project settings)
                          (-> (projects/list-projects settings)

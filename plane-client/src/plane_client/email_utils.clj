@@ -54,23 +54,52 @@
 (defn should-process-email?
   "Check if email should be processed based on subject filter.
   
-  Returns true if subject contains [plane] tag (case-insensitive)."
-  [subject]
-  (when subject
-    (boolean (re-find #"(?i)\[plane\]" subject))))
-
-(defn clean-subject
-  "Remove [plane] tag from subject.
+  Parameters:
+  - subject: Email subject line
+  - filter-tag: Optional filter tag (e.g., 'plane'). If nil/empty, all emails are processed.
+  
+  Returns true if:
+  - filter-tag is nil/empty (process all emails), OR
+  - subject contains [filter-tag] (case-insensitive)
   
   Examples:
-  - '[plane] Bug report' -> 'Bug report'
-  - '[PLANE] Feature request' -> 'Feature request'
-  - 'Re: [plane] Bug report' -> 'Re: Bug report'"
-  [subject]
-  (when subject
-    (-> subject
-        (str/replace #"(?i)\[plane\]\s*" "")
-        str/trim)))
+  - (should-process-email? 'Bug report' nil) => true (no filter)
+  - (should-process-email? '[plane] Bug' 'plane') => true (has tag)
+  - (should-process-email? 'Bug report' 'plane') => false (missing tag)"
+  ([subject]
+   (should-process-email? subject "plane"))
+  ([subject filter-tag]
+   (if (or (nil? filter-tag) (empty? filter-tag))
+     ;; No filter configured - process all emails
+     true
+     ;; Filter configured - check for tag
+     (when subject
+       (let [pattern (re-pattern (str "(?i)\\[" (java.util.regex.Pattern/quote filter-tag) "\\]"))]
+         (boolean (re-find pattern subject)))))))
+
+(defn clean-subject
+  "Remove filter tag from subject.
+  
+  Parameters:
+  - subject: Email subject line
+  - filter-tag: Optional filter tag to remove (e.g., 'plane'). If nil/empty, returns subject unchanged.
+  
+  Examples:
+  - (clean-subject '[plane] Bug' 'plane') => 'Bug'
+  - (clean-subject '[PLANE] Feature' 'plane') => 'Feature'
+  - (clean-subject 'Bug report' 'plane') => 'Bug report'
+  - (clean-subject '[plane] Bug' nil) => '[plane] Bug' (no cleaning)"
+  ([subject]
+   (clean-subject subject "plane"))
+  ([subject filter-tag]
+   (if (or (nil? filter-tag) (empty? filter-tag) (nil? subject))
+     ;; No filter or no subject - return as-is
+     subject
+     ;; Remove the filter tag
+     (let [pattern (re-pattern (str "(?i)\\[" (java.util.regex.Pattern/quote filter-tag) "\\]\\s*"))]
+       (-> subject
+           (str/replace pattern "")
+           str/trim)))))
 
 ;; ============================================================================
 ;; Assignment Detection
