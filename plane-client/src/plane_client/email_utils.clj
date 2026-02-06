@@ -137,6 +137,89 @@
     {:team "General" :note "Would assign to general pool"}))
 
 ;; ============================================================================
+;; Field Extraction from Email Content
+;; ============================================================================
+
+(defn extract-labels
+  "Extract labels from email body.
+  
+  Looks for patterns like:
+  - Labels: bug, frontend, urgent
+  - Tags: bug, ui
+  - Label: critical
+  
+  Returns: vector of label strings"
+  [body]
+  (when body
+    (let [text (str body)
+          ;; Match 'Labels:', 'Tags:', 'Label:', 'Tag:' (case-insensitive)
+          pattern #"(?i)(?:labels?|tags?):\s*([^\n]+)"
+          match (re-find pattern text)]
+      (when match
+        (let [labels-str (second match)]
+          (->> (str/split labels-str #"[,;]")
+               (map str/trim)
+               (filter #(not (empty? %)))
+               vec))))))
+
+(defn extract-state
+  "Extract state/status from email body.
+  
+  Looks for patterns like:
+  - State: in-progress
+  - Status: done
+  - State: backlog
+  
+  Returns: state string or nil"
+  [body]
+  (when body
+    (let [text (str body)
+          ;; Match 'State:' or 'Status:' (case-insensitive)
+          pattern #"(?i)(?:state|status):\s*([^\n,;]+)"
+          match (re-find pattern text)]
+      (when match
+        (-> (second match)
+            str/trim
+            str/lower-case)))))
+
+(defn extract-assignee
+  "Extract assignee from email body.
+  
+  Looks for patterns like:
+  - Assign: @john
+  - Assignee: john@example.com
+  - Assign to: john
+  
+  Returns: assignee string or nil"
+  [body]
+  (when body
+    (let [text (str body)
+          ;; Match 'Assign:', 'Assignee:', 'Assign to:' (case-insensitive)
+          pattern #"(?i)assign(?:ee)?(?:\s+to)?:\s*@?([^\n,;]+)"
+          match (re-find pattern text)]
+      (when match
+        (-> (second match)
+            str/trim)))))
+
+(defn extract-due-date
+  "Extract due date from email body.
+  
+  Looks for patterns like:
+  - Due: 2026-02-10
+  - Deadline: 2026-02-15
+  - Due date: tomorrow
+  
+  Returns: date string or nil"
+  [body]
+  (when body
+    (let [text (str body)
+          ;; Match 'Due:', 'Deadline:', 'Due date:' (case-insensitive)
+          pattern #"(?i)(?:due(?:\s+date)?|deadline):\s*([^\n,;]+)"
+          match (re-find pattern text)]
+      (when match
+        (-> (second match)
+            str/trim)))))
+;; ============================================================================
 ;; Attachment Detection
 ;; ============================================================================
 
@@ -202,13 +285,30 @@
                                               attachments))))
         enhanced-desc (str body attachment-desc)
         _ (println "   Enhanced description length:" (count (str enhanced-desc)))
-        _ (println "   Enhanced description preview:" (subs (str enhanced-desc) 0 (min 100 (count (str enhanced-desc)))))]
+        _ (println "   Enhanced description length:" (count (str enhanced-desc)))
+        _ (println "   Enhanced description preview:" (subs (str enhanced-desc) 0 (min 100 (count (str enhanced-desc)))))
+        
+        ;; Extract additional fields from email body
+        labels (extract-labels body)
+        state (extract-state body)
+        assignee-email (extract-assignee body)
+        due-date (extract-due-date body)
+        
+        _ (when labels (println "   📌 Labels extracted:" labels))
+        _ (when state (println "   🔄 State extracted:" state))
+        _ (when assignee-email (println "   👤 Assignee extracted:" assignee-email))
+        _ (when due-date (println "   📅 Due date extracted:" due-date))]
     {:priority priority
      :priority-plane (priority-keyword->plane priority)
      :team team
      :assignee assignee
      :attachments attachments
-     :enhanced-description enhanced-desc}))
+     :enhanced-description enhanced-desc
+     ;; New extracted fields
+     :labels labels
+     :state state
+     :assignee-email assignee-email
+     :due-date due-date}))
 
 (defn print-analysis
   "Pretty-print email analysis"

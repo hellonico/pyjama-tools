@@ -79,7 +79,29 @@
     :subject "[DEPLOY] CI/CD pipeline failing on production deploy"
     :body "Our deployment pipeline is failing when trying to deploy to production. The Docker build step completes fine, but the Kubernetes deployment fails with authentication errors.\n\nError: Failed to authenticate with container registry\n\nThis is blocking our release. We need DevOps to look at the CI/CD configuration and fix the credentials.\n\nDeployment logs and architecture diagram attached."
     :timestamp "2026-02-02T12:30:00Z"
-    :attachments (pick-random-files 2)}])
+    :attachments (pick-random-files 2)}
+
+   {:id 5
+    :from "product@example.com"
+    :subject "[FEATURE] Add dark mode to user settings"
+    :body "We need to implement dark mode support in the user settings page.
+
+This is a highly requested feature from our users. The implementation should include:
+- Toggle switch in settings
+- Save preference to user profile
+- Apply dark theme across all pages
+- Test on mobile and desktop
+
+Labels: feature, ui, enhancement
+State: in-progress
+Assignee: sarah@example.com
+Due: 2026-02-15
+
+This should be prioritized for the next sprint.
+
+Thanks!"
+    :timestamp "2026-02-02T13:00:00Z"
+    :attachments (pick-random-files 1)}])
 
 (defn extract-issue-key
   "Extract issue key from email subject (text between [brackets])"
