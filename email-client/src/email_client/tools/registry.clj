@@ -5,7 +5,8 @@
             [clojure-mail.message :as message]
             [clojure.string]
             [secrets.core :as secrets])
-  (:import [javax.mail Folder Flags$Flag]))
+  (:import [javax.mail Folder Flags$Flag]
+           [javax.mail.search FlagTerm]))
 
 ;; ============================================================================
 ;; Tool Implementations
@@ -80,17 +81,23 @@
     (if-not settings
       {:error "Email settings not found in secrets"}
       (try
+        (println "🔍 Getting email store...")
         ;; Get store and folder with READ_WRITE access
         (let [store (read/get-store settings)
+              _ (println "✓ Got store, getting INBOX folder...")
               folder (.getFolder store "INBOX")]
+          (println "✓ Got folder, opening with READ_WRITE...")
           (.open folder Folder/READ_WRITE)
+          (println "✓ Folder opened, searching for unread messages...")
           (try
-            (let [messages (.getMessages folder)
-                  ;; Find ALL unread messages (up to limit)
-                  unread-msgs (->> messages
-                                   (filter #(not (.contains (.getFlags %) Flags$Flag/SEEN)))
-                                   (take limit)
-                                   vec)]
+            (let [;; Use IMAP SEARCH to fetch only UNSEEN messages - much faster!
+                  search-term (javax.mail.search.FlagTerm.
+                               (javax.mail.Flags. Flags$Flag/SEEN)
+                               false)  ; false = NOT SEEN
+                  messages (.search folder search-term)
+                  _ (println (str "✓ Found " (alength messages) " unread messages"))
+                  ;; Limit the number of messages to process
+                  unread-msgs (vec (take limit messages))]
               (if (seq unread-msgs)
                 (let [emails (mapv (fn [unread-msg]
                                      ;; Mark as read if requested
@@ -179,5 +186,4 @@
                                       :description "Maximum number of emails to retrieve"
                                       :default 10}}
                  :required []}
-    :streaming true
     :function watch-emails}})
