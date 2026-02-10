@@ -22,3 +22,4 @@ secrets.edn.enc
 # OS
 .DS_Store
 Thumbs.db
+.cpcache
