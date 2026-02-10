@@ -20,7 +20,6 @@
                    "web-search" (web/web-search params)
                    "wiki-search" (wiki/wiki-search params)
                    "wiki-movie" (movie/wiki-movie params)
-                   "create-movie" (movie/create-movie params)
 
                    {:status :error
                     :message (str "Unknown function: " function-name)})]
