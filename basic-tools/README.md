@@ -79,3 +79,24 @@ echo '{:function "web-search" :params {:query "Clojure" :topk 3}}' | clj -M -m b
 - Brave Search API key (set in secrets)
 - clj-http for HTTP requests
 - hickory for HTML parsing
+
+## Configuration
+
+### API Keys
+
+The `web-search` tool requires a **Brave Search API key**. 
+
+**To configure:**
+
+1. Get a free API key from [Brave Search API](https://brave.com/search/api/)
+2. Store it using the secrets library:
+
+```bash
+# Using Pyjama secrets
+clj -M:pyjama secrets set brave-api-key YOUR_API_KEY_HERE
+
+# Or using environment variable
+export BRAVE_API_KEY=YOUR_API_KEY_HERE
+```
+
+**Note:** The `wiki-search` and `create-movie` tools do NOT require API keys.
