@@ -10,7 +10,7 @@
   "Entry point for external tool execution.
    Reads EDN from stdin: {:function \"function-name\" :params {...}}
    Writes EDN to stdout: {:status :ok :result ...}"
-  [& args]
+  [& _args]
   (try
     (let [input (edn/read *in*)
           function-name (:function input)
@@ -19,6 +19,7 @@
           result (case function-name
                    "web-search" (web/web-search params)
                    "wiki-search" (wiki/wiki-search params)
+                   "wiki-movie" (movie/wiki-movie params)
                    "create-movie" (movie/create-movie params)
 
                    {:status :error
